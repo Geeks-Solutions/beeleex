@@ -1,18 +1,24 @@
 # Beeleex
 
-To start your Phoenix server:
+Beeleex is a helper library that allows you to quickly setup the connections between your business unit and BeeLee.
+## Installation
 
-  * Install dependencies with `mix deps.get`
-  * Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+  In your mix.exs add this to your list of dependencies:
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+  ```elixir
+  {:beeleex, "~> 0.1.0"}
+  ```
+## Configuration
+#### Common Configuration
+To setup Beeleex, all you need to do is the following:
 
-Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+  - In your `router.ex`, add this line:
+  ```elixir
+  use Beeleex.Routes, scope: "/beeleex"
+  ```
 
-## Learn more
-
-  * Official website: https://www.phoenixframework.org/
-  * Guides: https://hexdocs.pm/phoenix/overview.html
-  * Docs: https://hexdocs.pm/phoenix
-  * Forum: https://elixirforum.com/c/phoenix-forum
-  * Source: https://github.com/phoenixframework/phoenix
+  - In your `config.ex`, add the following: 
+  ```elixir
+  config :beeleex,
+  verify_token_action: %{module: YourModule, function: :function_name}
+  ```
