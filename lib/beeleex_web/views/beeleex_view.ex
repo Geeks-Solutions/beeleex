@@ -2,14 +2,7 @@ defmodule BeeleexWeb.BeeleexView do
   @moduledoc false
   use BeeleexWeb, :view
 
-  def render(
-        "user_verified.json",
-        %{
-          beeleex: %{
-            user_id: user_id
-          }
-        }
-      ) do
+  def render("user_verified.json", %{user_id: user_id}) do
     %{
       user_id: user_id
     }
