@@ -25,16 +25,16 @@ defmodule Beeleex.WebhookPlug do
     with {:ok, payload, _} = Conn.read_body(conn),
          event <- Jason.decode!(payload),
          :ok <- handle_event!(handler, event) do
-      send_resp(conn, 200, "Webhook received.") |> halt()
+      send_resp(conn, 200, "") |> halt()
     else
       {:handle_error, reason} -> send_resp(conn, 400, reason) |> halt()
-      _ -> send_resp(conn, 400, "Bad request.") |> halt()
+      _ -> send_resp(conn, 400, "") |> halt()
     end
   end
 
   @impl true
   def call(%Conn{path_info: path_info} = conn, %{path_info: path_info}) do
-    send_resp(conn, 400, "Bad request.") |> halt()
+    send_resp(conn, 400, "") |> halt()
   end
 
   @impl true
