@@ -40,8 +40,8 @@ defmodule BeeleexWeb.BeeleexController do
     action = Helpers.env(:verify_token_action, %{raise: true})
 
     case apply(action[:module], action[:function], [payload]) do
-      {:ok, user_id} ->
-        render(conn, "user_verified.json", user_id: user_id)
+      {:ok, %{user_id: _user_id} = res} ->
+        render(conn, "user_verified.json", res: res)
 
       _ ->
         render(conn |> put_status(400), "error.json", error: "Invalid token")
