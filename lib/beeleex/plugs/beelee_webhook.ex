@@ -22,7 +22,7 @@ defmodule Beeleex.WebhookPlug do
           handler: handler
         }
       ) do
-    with {:ok, payload, _} = Conn.read_body(conn),
+    with {:ok, payload, _} <- Conn.read_body(conn),
          event <- Jason.decode!(payload),
          :ok <- handle_event!(handler, event) do
       send_resp(conn, 200, "") |> halt()
