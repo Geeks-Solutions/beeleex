@@ -35,10 +35,13 @@ defmodule Beeleex.MixProject do
     [
       {:phoenix, ">= 1.5.0"},
       {:telemetry_metrics, "~> 0.6"},
-      {:telemetry_poller, "~> 0.4"},
+      {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.18"},
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
+      {:ex_geeks,
+       git: "https://github.com/Geeks-Solutions/ex_geeks",
+       ref: "a9e510f34eb5683471128f76001c54bbe70a723a"},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
     ]
   end

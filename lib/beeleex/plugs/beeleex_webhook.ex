@@ -1,6 +1,7 @@
 defmodule Beeleex.WebhookPlug do
   @moduledoc false
 
+  alias Beeleex.Webhook
   import Plug.Conn
   alias Plug.Conn
   @behaviour Plug
@@ -19,16 +20,23 @@ defmodule Beeleex.WebhookPlug do
         %Conn{method: "POST", path_info: path_info} = conn,
         %{
           path_info: path_info,
+          secret: secret,
           handler: handler
         }
       ) do
-    with {:ok, payload, _} <- Conn.read_body(conn),
-         event <- Jason.decode!(payload),
+
+    with [signature] <- get_req_header(conn, "beelee-signature"),
+         {:ok, payload, _} <- Conn.read_body(conn),
+         {:ok, event} <- Webhook.construct_event(payload, signature, secret),
          :ok <- handle_event!(handler, event) do
       send_resp(conn, 200, "") |> halt()
     else
-      {:handle_error, reason} -> send_resp(conn, 400, reason) |> halt()
-      _ -> send_resp(conn, 400, "") |> halt()
+      {:handle_error, reason} ->
+        send_resp(conn, 400, reason) |> halt()
+      [] ->
+        send_resp(conn, 400, "Secure your call with a valid signature and try again") |> halt()
+      error ->
+        send_resp(conn, 400, "") |> halt()
     end
   end
 
