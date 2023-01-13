@@ -24,6 +24,7 @@ defmodule Beeleex.WebhookPlug do
           handler: handler
         }
       ) do
+    secret = parse_secret!(secret)
 
     with [signature] <- get_req_header(conn, "beelee-signature"),
          {:ok, payload, _} <- Conn.read_body(conn),
@@ -75,5 +76,22 @@ defmodule Beeleex.WebhookPlug do
         Event data: #{inspect(event)}
         """
     end
+  end
+
+  defp parse_secret!({m, f, a}), do: apply(m, f, a)
+  defp parse_secret!(fun) when is_function(fun), do: fun.()
+  defp parse_secret!(secret) when is_binary(secret), do: secret
+
+  defp parse_secret!(secret) do
+    raise """
+    The Beelee webhook secret is invalid. Expected a string, tuple, or function.
+    Got: #{inspect(secret)}
+    If you're setting the secret at runtime, you need to pass a tuple or function.
+    For example:
+    plug Beeleex.WebhookPlug,
+      at: "/webhook/beeleex",
+      handler: MyAppWeb.BeeleeHandler,
+      secret: {Application, :get_env, [:myapp, :beelee_bu_secure_secret]}
+    """
   end
 end
