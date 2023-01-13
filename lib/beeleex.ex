@@ -7,6 +7,13 @@ defmodule Beeleex do
   if it comes from the database, an external API or others.
   """
 
+  require Logger
+
+  def debug_variable(variable, label) do
+    if Application.get_env(:beeleex, :debug_on, false) do
+      Logger.debug("#{label}: #{variable}")
+    end
+  end
   def json_library do
     Application.get_env(:beeleex, :json_library, Jason)
     |> expand_value()

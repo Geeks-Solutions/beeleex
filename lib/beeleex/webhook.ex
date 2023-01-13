@@ -37,6 +37,9 @@ defmodule Beeleex.Webhook do
   @spec construct_event(String.t(), String.t(), String.t(), integer) ::
           {:ok, Stripe.Event.t()} | {:error, any}
   def construct_event(payload, signature_header, secret, tolerance \\ @default_tolerance) do
+    Beeleex.debug_variable(payload, "payload")
+    Beeleex.debug_variable(signature_header, "signature_header")
+    Beeleex.debug_variable(secret, "secret")
     case verify_header(payload, signature_header, secret, tolerance) do
       :ok ->
         {:ok, convert_to_event!(payload)}
@@ -104,6 +107,9 @@ defmodule Beeleex.Webhook do
   defp check_signatures(signatures, timestamp, payload, secret) do
     signed_payload = "#{timestamp}.#{payload}"
     expected_signature = compute_signature(signed_payload, secret)
+
+    Beeleex.debug_variable(signed_payload, "signed_payload")
+    Beeleex.debug_variable(expected_signature, "expected_signature")
 
     if Enum.any?(signatures, &secure_equals?(&1, expected_signature)) do
       {:ok, signatures}
