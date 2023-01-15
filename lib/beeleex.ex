@@ -9,9 +9,15 @@ defmodule Beeleex do
 
   require Logger
 
+  @doc """
+  This function will log the variables passed if the debug_on variable is true
+  this variable should be set in your environment.
+  """
   def debug_variable(variable, label) do
     if Application.get_env(:beeleex, :debug_on, false) do
+      Logger.configure(level: :debug)
       Logger.debug("#{label}: #{variable}")
+      Logger.configure(level: :info)
     end
   end
   def json_library do

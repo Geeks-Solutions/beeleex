@@ -35,7 +35,7 @@ defmodule Beeleex.Webhook do
       end
   """
   @spec construct_event(String.t(), String.t(), String.t(), integer) ::
-          {:ok, Stripe.Event.t()} | {:error, any}
+          {:ok, Beeleex.Event.t()} | {:error, any}
   def construct_event(payload, signature_header, secret, tolerance \\ @default_tolerance) do
     Beeleex.debug_variable(payload, "payload")
     Beeleex.debug_variable(signature_header, "signature_header")
@@ -150,7 +150,9 @@ defmodule Beeleex.Webhook do
 
   defp convert_to_event!(payload) do
     payload
+    |> tap(&Beeleex.debug_variable(&1, "Payload before decode"))
     |> Beeleex.json_library().decode!()
+    |> tap(&Beeleex.debug_variable(&1, "Payload after decode"))
     |> Beeleex.Converter.convert_result()
   end
 end

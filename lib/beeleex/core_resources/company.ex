@@ -4,12 +4,14 @@ defmodule Beeleex.Company do
   """
 
   @type t :: %__MODULE__{
-          country: String.t(),
-          projects_ids: list(String.t()),
-          vat_number: String.t()
+      id: integer,
+      country: String.t(),
+      projects_ids: list(String.t()),
+      vat_number: String.t()
         }
 
   defstruct [
+    :id,
     :country,
     :projects_ids,
     :vat_number
