@@ -16,7 +16,7 @@ defmodule Beeleex do
   def debug_variable(variable, label) do
     if Application.get_env(:beeleex, :debug_on, false) do
       Logger.configure(level: :debug)
-      Logger.debug("#{label}: #{variable}")
+      Logger.debug("#{label}: #{inspect(variable)}")
       Logger.configure(level: :info)
     end
   end
