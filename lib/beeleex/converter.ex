@@ -20,6 +20,7 @@ to a standard format
   defp object_module("invoice_payment_success"), do: Beeleex.InvoicePayment
   defp object_module("invoice_payment_failure"), do: Beeleex.InvoicePayment
   defp object_module("payment_method_added"), do: Beeleex.PaymentMethod
+  defp object_module("payment_method_add_failed"), do: Beeleex.PaymentMethod
   defp object_module("payment_method_expire_2M"), do: Beeleex.PaymentMethod
   defp object_module("payment_method_expire_1M"), do: Beeleex.PaymentMethod
   defp object_module("payment_method_update"), do: Beeleex.PaymentMethod
