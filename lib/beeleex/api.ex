@@ -44,4 +44,53 @@ To update data from Business Units to the Billing Center
       end
   end
 
+  def get_company_by_id(company_id) do
+    case ExGeeks.Helpers.endpoint_post_callback(
+        url(),
+        %{
+          query: """
+          query getcompaniy($id:Int!){
+            getCompany(id:$id) {
+                address{
+                  city
+                  country
+                  postalCode
+                  streetName
+                }
+                name
+                email
+                phoneNumber
+                customerProjects
+                vatNumber
+                businessUnit{
+                  id
+                  archived
+                  name
+                  billingCenter{
+                    name
+                    id
+                    vatNumber
+                  }
+                  cycle
+                }
+                userId
+                id
+                solvencyStatus
+              }}
+          """,
+          variables: %{
+            id: company_id
+          }
+        },
+        headers()
+      ) do
+        %{"data" => %{"getcompaniy" => %{"message" => message}}} ->
+          {:ok, message}
+        %{"data" => _, "errors" => errors} ->
+          error = List.first(errors)["message"]
+          Logger.error("#{__ENV__.function|>elem(0)}: #{error}")
+          {:error, error}
+      end
+  end
+
 end
