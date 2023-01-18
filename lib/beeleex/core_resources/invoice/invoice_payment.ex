@@ -10,10 +10,12 @@ defmodule Beeleex.InvoicePayment do
     cycle: String.t(),
     cycle_type: String.t(),
     attempt: integer,
+    last_attempt: boolean,
     correction: boolean,
-    companies: map,
+    company: map,
     payment_method: Beeleex.PaymentMethod.t(),
     failed_payment_methods: List.t(Beelee.Notifications.PaymentMethod.t()),
+    remaining_unpaid_invoice_count: integer,
     created: String.t(),
     currency: String.t()
   }
@@ -25,10 +27,12 @@ defmodule Beeleex.InvoicePayment do
     :cycle,
     :cycle_type,
     :attempt,
+    :last_attempt,
     :correction,
-    :companies,
+    :company,
     :payment_method,
     :failed_payment_methods,
+    :remaining_unpaid_invoice_count,
     :created,
     :currency
   ]
