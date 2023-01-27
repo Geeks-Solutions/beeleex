@@ -1,5 +1,103 @@
 defmodule Beeleex.WebhookPlug do
-  @moduledoc false
+  @moduledoc """
+  Helper `Plug` to process webhook events and send them to a custom handler.
+
+  ## Installation
+
+  To handle webhook events, you must first configure your application's endpoint.
+  Add the following to `endpoint.ex`, **before** `Plug.Parsers` is loaded.
+
+  ```elixir
+  plug Beeleex.WebhookPlug,
+    at: "/webhook/beeleex",
+    handler: MyAppWeb.Billing.BeeleeHandler,
+    secret: {Application, :get_env, [:beeleex, :business_unit_secure_key]}
+  ```
+
+  If you have not yet added a webhook to your Beelee account, you can do so
+  by visiting `Business Unit` in the Beelee dashboard. Use the route
+  you configured in the endpoint above and copy the secure key into your
+  app's configuration.
+
+  ### Supported options
+
+  - `at`: The URL path your application should listen for Beelee webhooks on.
+    Configure this to match whatever you set in the webhook.
+  - `handler`: Custom event handler module that accepts `Beeleex.Event` structs
+    and processes them within your application. You must create this module.
+  - `secret`: Secure key obtained from the Beelee dashboard.
+    This can also be a function or a tuple for runtime configuration.
+  - `tolerance`: Maximum age (in seconds) allowed for the webhook event.
+
+  ## Handling events
+
+  You will need to create a custom event handler module to handle events.
+
+  Your event handler module should define a `handle_event/1` function which takes
+  a `Beeleex.Event` struct and returns either `{:ok, term}` or `:ok`.
+  This will mark the event as successfully processed. Alternatively handler
+  can signal an error by returning `:error` or `{:error, reason}` tuple,
+  where reason is an atom or a string. HTTP status code 400 will be used for errors.
+
+  ### Example
+
+  ```elixir
+  # lib/myapp_web/beelee_handler.ex
+
+  defmodule MyAppWeb.BeeleeHandler do
+
+    def handle_event(%Beeleex.Event{type: "invoice_initiation"} = event) do
+      # TODO: handle the invoice_initiation event
+    end
+
+    def handle_event(%Beeleex.Event{type: "payment_method_added"} = event) do
+      # TODO: handle the payment_method_added event
+    end
+
+    # Return HTTP 200 for unhandled events
+    def handle_event(_event), do: :ok
+  end
+  ```
+
+  ## Configuration
+
+  You should configure the secure key in your app's own config file.
+  For example:
+
+  ```elixir
+  config :beeleex,
+    # [...]
+    business_unit_secure_key: "whsec_******"
+  ```
+
+  You may then include the secret in your endpoint:
+
+  ```elixir
+  plug Beeleex.WebhookPlug,
+    at: "/webhook/beeleex",
+    handler: MyAppWeb.Billing.BeeleeHandler,
+    secret: Application.get_env(:beeleex, :business_unit_secure_key)
+  ```
+
+  ### Runtime configuration
+
+  If you're loading config dynamically at runtime (eg with `runtime.exs`
+  or an OTP app) you must pass a tuple or function as the secret.
+
+  ```elixir
+  # With a tuple
+  plug Beeleex.WebhookPlug,
+    at: "/webhook/Beeleex",
+    handler: MyAppWeb.Billing.BeeleeHandler,
+    secret: {Application, :get_env, [:beeleex, :business_unit_secure_key]}
+
+  # Or, with a function
+  plug Beeleex.WebhookPlug,
+    at: "/webhook/beeleex",
+    handler: MyAppWeb.Billing.BeeleeHandler,
+    secret: fn -> Application.get_env(:beeleex, :business_unit_secure_key) end
+  ```
+  """
 
   alias Beeleex.Webhook
   import Plug.Conn
@@ -22,13 +120,13 @@ defmodule Beeleex.WebhookPlug do
           path_info: path_info,
           secret: secret,
           handler: handler
-        }
+        } = opts
       ) do
     secret = parse_secret!(secret)
 
     with [signature] <- get_req_header(conn, "beelee-signature"),
          {:ok, payload, _} <- Conn.read_body(conn),
-         {:ok, event} <- Webhook.construct_event(payload, signature, secret),
+         {:ok, event} <- construct_event(payload, signature, secret, opts),
          :ok <- handle_event!(handler, event) do
       send_resp(conn, 200, "") |> halt()
     else
@@ -76,6 +174,14 @@ defmodule Beeleex.WebhookPlug do
         Event data: #{inspect(event)}
         """
     end
+  end
+
+  defp construct_event(payload, signature, secret, %{tolerance: tolerance}) do
+    Webhook.construct_event(payload, signature, secret, tolerance)
+  end
+
+  defp construct_event(payload, signature, secret, _opts) do
+    Webhook.construct_event(payload, signature, secret)
   end
 
   defp parse_secret!({m, f, a}), do: apply(m, f, a)
