@@ -10,7 +10,8 @@ defmodule Beeleex.Company do
     email: String.t(),
     country: String.t(),
     projects_ids: list(String.t()),
-    vat_number: String.t()
+    vat_number: String.t(),
+    solvency_status: String.t()
   }
 
   defstruct [
@@ -20,7 +21,8 @@ defmodule Beeleex.Company do
     :email,
     :country,
     :projects_ids,
-    :vat_number
+    :vat_number,
+    :solvency_status
   ]
 
 end

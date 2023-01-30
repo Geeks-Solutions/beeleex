@@ -9,7 +9,9 @@ defmodule Beeleex.InvoiceInitiation do
     cycle_type: String.t(),
     companies: map,
     created: String.t(),
-    currency: String.t()
+    currency: String.t(),
+    beginning: String.t(),
+    inserted_at: String.t()
   }
 
   defstruct [
@@ -18,7 +20,9 @@ defmodule Beeleex.InvoiceInitiation do
     :cycle_type,
     :companies,
     :created,
-    :currency
+    :currency,
+    :beginning,
+    :inserted_at
   ]
 
 end

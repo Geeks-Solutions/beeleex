@@ -26,5 +26,6 @@ to a standard format
   defp object_module("payment_method_update"), do: Beeleex.PaymentMethod
   defp object_module("payment_method_expiry_0_left"), do: Beeleex.PaymentMethod
   defp object_module("payment_method_expiry_1_left"), do: Beeleex.PaymentMethod
+  defp object_module("company_update"), do: Beeleex.Company
 
 end
