@@ -6,6 +6,7 @@ defmodule Beeleex.InvoiceUpdate do
   @type t :: %__MODULE__{
     cycle: cycle(),
     companyId: integer,
+    decimalPlaces: integer,
     pricing: list(pricing()),
     created: String.t(),
     currency: String.t()
@@ -40,6 +41,7 @@ defmodule Beeleex.InvoiceUpdate do
   defstruct [
     :cycle,
     :companyId,
+    :decimalPlaces,
     :pricing,
     :created,
     :currency

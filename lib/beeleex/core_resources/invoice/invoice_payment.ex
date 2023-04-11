@@ -4,7 +4,8 @@ defmodule Beeleex.InvoicePayment do
   """
 
   @type t :: %__MODULE__{
-    invoice_amount: float,
+    invoice_amount: integer,
+    decimal_places: integer,
     invoice_id: integer,
     invoice_creation: String.t(),
     cycle: String.t(),
@@ -22,6 +23,7 @@ defmodule Beeleex.InvoicePayment do
 
   defstruct [
     :invoice_amount,
+    :decimal_places,
     :invoice_id,
     :invoice_creation,
     :cycle,
