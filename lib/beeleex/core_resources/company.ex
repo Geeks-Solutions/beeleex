@@ -4,15 +4,16 @@ defmodule Beeleex.Company do
   """
 
   @type t :: %__MODULE__{
-    id: integer,
-    user_id: String.t(),
-    name: String.t(),
-    email: String.t(),
-    country: String.t(),
-    projects_ids: list(String.t()),
-    vat_number: String.t(),
-    solvency_status: String.t()
-  }
+          id: integer,
+          user_id: String.t(),
+          name: String.t(),
+          email: String.t(),
+          country: String.t(),
+          projects_ids: list(String.t()),
+          vat_number: String.t(),
+          solvency_status: String.t(),
+          unlinked_project_id: String.t()
+        }
 
   defstruct [
     :id,
@@ -22,7 +23,7 @@ defmodule Beeleex.Company do
     :country,
     :projects_ids,
     :vat_number,
-    :solvency_status
+    :solvency_status,
+    :unlinked_project_id
   ]
-
 end
