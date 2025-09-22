@@ -12,7 +12,10 @@ defmodule Beeleex.Company do
           projects_ids: list(String.t()),
           vat_number: String.t(),
           solvency_status: String.t(),
-          unlinked_project_id: String.t()
+          unlinked_project_id: String.t(),
+          phone_number: String.t(),
+          address: map(),
+          business_unit: map()
         }
 
   defstruct [
@@ -24,6 +27,9 @@ defmodule Beeleex.Company do
     :projects_ids,
     :vat_number,
     :solvency_status,
-    :unlinked_project_id
+    :unlinked_project_id,
+    :phone_number,
+    :address,
+    :business_unit
   ]
 end

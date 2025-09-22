@@ -40,6 +40,7 @@ defmodule Beeleex.Webhook do
     Beeleex.debug_variable(payload, "payload")
     Beeleex.debug_variable(signature_header, "signature_header")
     Beeleex.debug_variable(secret, "secret")
+
     case verify_header(payload, signature_header, secret, tolerance) do
       :ok ->
         {:ok, convert_to_event!(payload)}
