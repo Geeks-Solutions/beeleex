@@ -37,13 +37,13 @@ defmodule Beeleex.MixProject do
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.18"},
-      {:jason, "~> 1.2"},
+      {:jason, "~> 1.4"},
       {:plug_cowboy, "~> 2.5"},
       {:ex_geeks,
        git: "https://github.com/Geeks-Solutions/ex_geeks",
-       ref: "2b65449197e7a84f582c27b8401f365295ab21f1"},
+       ref: "e0e52754f5cce87eb4775b619969514b8eb861e7"},
       # {:ex_geeks, path: "/Users/julien/Documents/Repos/Gitlab/Geeks/Libraries/ex_geeks"},
-      {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end
 
