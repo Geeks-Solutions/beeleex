@@ -3,6 +3,8 @@ defmodule Beeleex.Company do
   Work with Beelee Company.
   """
 
+  alias Beeleex.Helpers
+
   @type t :: %__MODULE__{
           id: integer,
           user_id: String.t(),
@@ -32,4 +34,18 @@ defmodule Beeleex.Company do
     :address,
     :business_unit
   ]
+
+  @spec compute_bu_cycle(Beeleex.Company.t()) :: Beeleex.Company.t()
+  def compute_bu_cycle(
+        %{business_unit: %{cycle: cycle_type, job: %{scheduled_at: next_execution_date}} = bu} =
+          company
+      ) do
+    {:ok, date, _} = DateTime.from_iso8601(next_execution_date)
+
+    bu =
+      bu
+      |> Map.merge(Helpers.compute_cycle_days(cycle_type, date))
+
+    Map.put(company, :business_unit, bu)
+  end
 end
