@@ -4,25 +4,24 @@ defmodule Beeleex.InvoiceInitiation do
   """
 
   @type t :: %__MODULE__{
-    cycle: String.t(),
-    cycle_ts: String.t(),
-    cycle_type: String.t(),
-    companies: map,
-    created: String.t(),
-    currency: String.t(),
-    beginning: String.t(),
-    inserted_at: String.t()
-  }
+          cycle: String.t(),
+          cycle_begin: String.t(),
+          cycle_end: String.t(),
+          cycle_type: String.t(),
+          companies: map,
+          created: String.t(),
+          currency: String.t(),
+          inserted_at: String.t()
+        }
 
   defstruct [
     :cycle,
-    :cycle_ts,
+    :cycle_begin,
+    :cycle_end,
     :cycle_type,
     :companies,
     :created,
     :currency,
-    :beginning,
     :inserted_at
   ]
-
 end
