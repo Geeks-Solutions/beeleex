@@ -24,6 +24,7 @@ defmodule Beeleex.InvoiceUpdate do
           packagePriceBeforeTax: integer,
           packageTax: integer,
           packagePriceWithTax: integer,
+          packageTaxRate: integer,
           packageName: String.t(),
           payAsYouGo: list(pay_as_you_go())
         }
@@ -35,6 +36,7 @@ defmodule Beeleex.InvoiceUpdate do
           unitPriceBeforeTax: integer,
           totalBeforeTax: integer,
           tax: integer,
+          taxRate: integer,
           totalWithTax: integer
         }
 
@@ -71,6 +73,7 @@ defmodule Beeleex.InvoiceUpdate do
         projectName,
         packagePriceBeforeTax,
         packageTax,
+        packageTaxRate,
         packagePriceWithTax,
         packageName,
         payAsYouGo
@@ -80,6 +83,7 @@ defmodule Beeleex.InvoiceUpdate do
       projectName: projectName,
       packagePriceBeforeTax: packagePriceBeforeTax,
       packageTax: packageTax,
+      packageTaxRate: packageTaxRate,
       packagePriceWithTax: packagePriceWithTax,
       packageName: packageName,
       payAsYouGo: payAsYouGo
