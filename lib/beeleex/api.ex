@@ -124,9 +124,18 @@ defmodule Beeleex.Api do
            %{
              query: """
              mutation generateInvoice($onetimeInvoice: OnetimeInvoiceInput) {
-               generateOnetimeInvoice(companyInvoice: $onetimeInvoice) {
-                 message
-               }
+              generateOnetimeInvoice(companyInvoice: $onetimeInvoice) {
+                id
+                amount_before_tax
+                tax_amount
+                tax_rate
+                amount_with_tax
+                status
+                type
+                reduction_amount_before_tax
+                reduction_tax_amount
+                reduction_amount_with_tax
+              }
              }
              """,
              variables: %{
