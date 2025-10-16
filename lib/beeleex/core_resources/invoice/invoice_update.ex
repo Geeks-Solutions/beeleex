@@ -5,15 +5,15 @@ defmodule Beeleex.InvoiceUpdate do
 
   @type t :: %__MODULE__{
           cycle: cycle(),
-          companyId: integer,
-          decimalPlaces: integer,
+          companyId: integer(),
+          decimalPlaces: integer(),
           pricing: list(pricing()),
           created: String.t(),
           currency: String.t()
         }
 
   @type cycle :: %{
-          id: integer,
+          id: integer(),
           type: String.t(),
           start: String.t()
         }
@@ -21,10 +21,10 @@ defmodule Beeleex.InvoiceUpdate do
   @type pricing :: %{
           projectId: String.t(),
           projectName: String.t(),
-          packagePriceBeforeTax: integer,
-          packageTax: integer,
-          packagePriceWithTax: integer,
-          packageTaxRate: integer,
+          packagePriceBeforeTax: integer(),
+          packageTax: integer(),
+          packagePriceWithTax: integer(),
+          packageTaxRate: integer(),
           packageName: String.t(),
           payAsYouGo: list(pay_as_you_go())
         }
@@ -32,12 +32,12 @@ defmodule Beeleex.InvoiceUpdate do
   @type pay_as_you_go :: %{
           name: String.t(),
           description: String.t(),
-          quantity: integer,
-          unitPriceBeforeTax: integer,
-          totalBeforeTax: integer,
-          tax: integer,
-          taxRate: integer,
-          totalWithTax: integer
+          quantity: integer(),
+          unitPriceBeforeTax: integer(),
+          totalBeforeTax: integer(),
+          tax: integer(),
+          taxRate: integer(),
+          totalWithTax: integer()
         }
 
   defstruct [
@@ -62,9 +62,10 @@ defmodule Beeleex.InvoiceUpdate do
   @spec format_pricing(
           String.t(),
           String.t(),
-          integer,
-          integer,
-          integer,
+          integer(),
+          integer(),
+          integer(),
+          integer(),
           String.t(),
           list(pay_as_you_go())
         ) :: pricing()
