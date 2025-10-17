@@ -124,9 +124,18 @@ defmodule Beeleex.Api do
            %{
              query: """
              mutation generateInvoice($onetimeInvoice: OnetimeInvoiceInput) {
-               generateOnetimeInvoice(companyInvoice: $onetimeInvoice) {
-                 message
-               }
+              generateOnetimeInvoice(companyInvoice: $onetimeInvoice) {
+                id
+                amount_before_tax
+                tax_amount
+                tax_rate
+                amount_with_tax
+                status
+                type
+                reduction_amount_before_tax
+                reduction_tax_amount
+                reduction_amount_with_tax
+              }
              }
              """,
              variables: %{
@@ -135,8 +144,124 @@ defmodule Beeleex.Api do
            },
            headers()
          ) do
-      %{"data" => %{"generateOnetimeInvoice" => %{"message" => message}}} ->
-        {:ok, message}
+      %{"data" => %{"generateOnetimeInvoice" => invoice}} ->
+        invoice
+        |> ExGeeks.Helpers.atomize_keys(transformer: &Macro.underscore/1)
+        |> then(fn company -> {:ok, struct(Beeleex.Invoice, company)} end)
+
+      %{"data" => _, "errors" => errors} ->
+        error = List.first(errors)["message"]
+        Logger.error("#{__ENV__.function |> elem(0)}: #{error}")
+        {:error, error}
+    end
+  end
+
+  @doc """
+  Loads the last invoice for the provided project ID for a given package in the current cycle
+  """
+  @spec get_current_cycle_invoice(String.t(), String.t()) ::
+          {:ok, Beeleex.Invoice.t()} | {:error, String.t()}
+  def get_current_cycle_invoice(project_id, package_name) do
+    case ExGeeks.Helpers.endpoint_post_callback(
+           url(),
+           %{
+             query: """
+             query getInvoices($filter: [Filter], $size: Int, $skip: Int) {
+               getInvoices(filter: $filter, size: $size, skip: $skip) {
+                 invoices {
+                   id
+                   amount_before_tax
+                   tax_amount
+                   tax_rate
+                   amount_with_tax
+                   cycle
+                   beginning
+                   end
+                   type
+                   reduction_amount_before_tax
+                   reduction_tax_amount
+                   reduction_amount_with_tax
+                   status
+                   breakdown {
+                     projectId
+                     packageName
+                   }
+                 }
+                 count
+                 total
+               }
+             }
+             """,
+             variables: %{
+               filter: [
+                 %{key: "project_id", value: project_id},
+                 %{key: "package_name", value: package_name}
+               ],
+               size: 1,
+               current_cycle: true
+             }
+           },
+           headers()
+         ) do
+      %{"data" => %{"getInvoices" => %{"count" => 0}}} ->
+        {:error, "no_match"}
+
+      %{"data" => %{"getInvoices" => %{"invoices" => [invoice]}}} ->
+        invoice
+        |> ExGeeks.Helpers.atomize_keys(transformer: &Macro.underscore/1)
+        |> then(fn invoice -> {:ok, struct(Beeleex.Invoice, invoice)} end)
+
+      %{"data" => _, "errors" => errors} ->
+        error = List.first(errors)["message"]
+        Logger.error("#{__ENV__.function |> elem(0)}: #{error}")
+        {:error, error}
+    end
+  end
+
+  @doc """
+  Generate a new credit note, requires:
+  - An amount in integer with the same decimal places as the originating invoice
+  - The originating invoice id
+  - A reason string
+  - Optionally you can also provide a list of tags
+  """
+  @spec generate_credit_note(integer(), integer(), String.t(), list(String.t()) | nil) ::
+          {:ok, Beeleex.CreditNote.t()} | {:error, String.t()}
+  def generate_credit_note(amount, originating_invoice_id, reason, tags \\ []) do
+    case ExGeeks.Helpers.endpoint_post_callback(
+           url(),
+           %{
+             query: """
+             mutation createCreditNote($CreditNote: CreditNoteInput!) {
+              createCreditNote(CreditNote: $CreditNote) {
+                id
+                reason
+                amount
+                tags
+                status
+                remainingAmount
+                originatingInvoice {
+                  id
+                  status
+                }
+              }
+             }
+             """,
+             variables: %{
+               CreditNote: %{
+                 reason: reason,
+                 amount: amount,
+                 tags: tags,
+                 originatingInvoiceId: originating_invoice_id
+               }
+             }
+           },
+           headers()
+         ) do
+      %{"data" => %{"createCreditNote" => %{"id" => _} = credit_note}} ->
+        credit_note
+        |> ExGeeks.Helpers.atomize_keys(transformer: &Macro.underscore/1)
+        |> then(fn credit_note -> {:ok, struct(Beeleex.CreditNote, credit_note)} end)
 
       %{"data" => _, "errors" => errors} ->
         error = List.first(errors)["message"]
