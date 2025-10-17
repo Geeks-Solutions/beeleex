@@ -144,8 +144,10 @@ defmodule Beeleex.Api do
            },
            headers()
          ) do
-      %{"data" => %{"generateOnetimeInvoice" => %{"message" => message}}} ->
-        {:ok, message}
+      %{"data" => %{"generateOnetimeInvoice" => invoice}} ->
+        invoice
+        |> ExGeeks.Helpers.atomize_keys(transformer: &Macro.underscore/1)
+        |> then(fn company -> {:ok, struct(Beeleex.Invoice, company)} end)
 
       %{"data" => _, "errors" => errors} ->
         error = List.first(errors)["message"]
@@ -155,10 +157,11 @@ defmodule Beeleex.Api do
   end
 
   @doc """
-  Loads the last invoice for the provided project ID in the current cycle
+  Loads the last invoice for the provided project ID for a given package in the current cycle
   """
-  @spec get_last_cycle_invoice(String.t()) :: {:ok, Beeleex.Invoice.t()} | {:error, String.t()}
-  def get_last_cycle_invoice(project_id) do
+  @spec get_current_cycle_invoice(String.t(), String.t()) ::
+          {:ok, Beeleex.Invoice.t()} | {:error, String.t()}
+  def get_current_cycle_invoice(project_id, package_name) do
     case ExGeeks.Helpers.endpoint_post_callback(
            url(),
            %{
@@ -191,7 +194,8 @@ defmodule Beeleex.Api do
              """,
              variables: %{
                filter: [
-                 %{key: "project_id", value: project_id}
+                 %{key: "project_id", value: project_id},
+                 %{key: "package_name", value: package_name}
                ],
                size: 1,
                current_cycle: true
@@ -230,9 +234,12 @@ defmodule Beeleex.Api do
              query: """
              mutation createCreditNote($CreditNote: CreditNoteInput!) {
               createCreditNote(CreditNote: $CreditNote) {
+                id
                 reason
                 amount
                 tags
+                status
+                remainingAmount
                 originatingInvoice {
                   id
                   status
