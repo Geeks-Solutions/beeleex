@@ -9,7 +9,8 @@ defmodule Beeleex.InvoiceUpdate do
           decimalPlaces: integer(),
           pricing: list(pricing()),
           created: String.t(),
-          currency: String.t()
+          currency: String.t(),
+          tags: list(String.t())
         }
 
   @type cycle :: %{
@@ -46,7 +47,8 @@ defmodule Beeleex.InvoiceUpdate do
     :decimalPlaces,
     :pricing,
     :created,
-    :currency
+    :currency,
+    :tags
   ]
 
   def format_payload(%Beeleex.InvoiceUpdate{} = invoice_update) do

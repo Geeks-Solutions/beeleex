@@ -157,11 +157,11 @@ defmodule Beeleex.Api do
   end
 
   @doc """
-  Loads the last invoice for the provided project ID for a given package in the current cycle
+  Loads up to 50 invoices for a company, the provided a project ID and a given tag in the current cycle
   """
-  @spec get_current_cycle_invoice(String.t(), String.t()) ::
-          {:ok, Beeleex.Invoice.t()} | {:error, String.t()}
-  def get_current_cycle_invoice(project_id, package_name) do
+  @spec get_current_cycle_invoices(String.t(), String.t(), String.t()) ::
+          {:ok, list(Beeleex.Invoice.t())} | {:error, String.t()}
+  def get_current_cycle_invoices(company_id, project_id, tag) do
     case ExGeeks.Helpers.endpoint_post_callback(
            url(),
            %{
@@ -182,6 +182,7 @@ defmodule Beeleex.Api do
                    reduction_tax_amount
                    reduction_amount_with_tax
                    status
+                   tags
                    breakdown {
                      projectId
                      packageName
@@ -194,10 +195,11 @@ defmodule Beeleex.Api do
              """,
              variables: %{
                filter: [
+                 %{key: "company_id", value: "#{company_id}"},
                  %{key: "project_id", value: project_id},
-                 %{key: "package_name", value: package_name}
+                 %{key: "tag", value: tag}
                ],
-               size: 1,
+               size: 50,
                current_cycle: true
              }
            },
@@ -206,10 +208,13 @@ defmodule Beeleex.Api do
       %{"data" => %{"getInvoices" => %{"count" => 0}}} ->
         {:error, "no_match"}
 
-      %{"data" => %{"getInvoices" => %{"invoices" => [invoice]}}} ->
-        invoice
-        |> ExGeeks.Helpers.atomize_keys(transformer: &Macro.underscore/1)
-        |> then(fn invoice -> {:ok, struct(Beeleex.Invoice, invoice)} end)
+      %{"data" => %{"getInvoices" => %{"invoices" => invoices}}} ->
+        invoices
+        |> Enum.map(fn invoice ->
+          invoice = ExGeeks.Helpers.atomize_keys(invoice, transformer: &Macro.underscore/1)
+          struct(Beeleex.Invoice, invoice)
+        end)
+        |> then(fn invoices -> {:ok, invoices} end)
 
       %{"data" => _, "errors" => errors} ->
         error = List.first(errors)["message"]
@@ -262,6 +267,137 @@ defmodule Beeleex.Api do
         credit_note
         |> ExGeeks.Helpers.atomize_keys(transformer: &Macro.underscore/1)
         |> then(fn credit_note -> {:ok, struct(Beeleex.CreditNote, credit_note)} end)
+
+      %{"data" => _, "errors" => errors} ->
+        error = List.first(errors)["message"]
+        Logger.error("#{__ENV__.function |> elem(0)}: #{error}")
+        {:error, error}
+    end
+  end
+
+  @doc """
+  Loads up to 50 credit notes for the list of provided invoices
+  """
+  @spec get_credit_notes_for_invoices(String.t(), list(Invoice.t())) ::
+          {:ok, list(CreditNote.t())} | {:error, String.t()}
+  def get_credit_notes_for_invoices(company_id, invoices) do
+    invoice_ids =
+      invoices
+      |> Stream.map(fn invoice -> invoice.id end)
+      |> Enum.join(",")
+
+    case ExGeeks.Helpers.endpoint_post_callback(
+           url(),
+           %{
+             query: """
+             query getCreditNotes($Filters: [FlopFilter], $PageSize: Int, $Page: Int) {
+              getCreditNotes(Filters: $Filters, Page: $Page, PageSize: $PageSize) {
+                data {
+                reason
+                amount
+                tags
+                originating_invoice {
+                  id
+                  company {
+                    id
+                    business_unit {
+                      id
+                    }
+                  }
+                  }
+                }
+                count
+                total
+              }
+             }
+             """,
+             variables: %{
+               Filters: [
+                 %{field: "credit_note_company", value: "#{company_id}"},
+                 %{field: "originating_invoices", value: invoice_ids}
+               ],
+               PageSize: 50
+             }
+           },
+           headers()
+         ) do
+      %{"data" => %{"getCreditNotes" => %{"data" => credit_notes}}} ->
+        credit_notes
+        |> Enum.map(fn credit_note ->
+          credit_note =
+            ExGeeks.Helpers.atomize_keys(credit_note, transformer: &Macro.underscore/1)
+
+          struct(Beeleex.CreditNote, credit_note)
+        end)
+        |> then(fn credit_notes -> {:ok, credit_notes} end)
+
+      %{"data" => _, "errors" => errors} ->
+        error = List.first(errors)["message"]
+        Logger.error("#{__ENV__.function |> elem(0)}: #{error}")
+        {:error, error}
+    end
+  end
+
+  @doc """
+  Request a credit for a company and generates the credit notes for it
+  based on the invoices in the current cycle.
+  Returns an error if the BU has no cycles yet or if no valid company is found.
+  """
+  @spec request_credit_in_cycle(String.t(), integer(), String.t(), String.t(), list(String.t())) ::
+          {:ok, list(CreditNote.t()), integer()} | {:error, String.t()}
+  def request_credit_in_cycle(company_id, max_amount, search_tag, reason, tags) do
+    case ExGeeks.Helpers.endpoint_post_callback(
+           url(),
+           %{
+             query: """
+             mutation requestCredit($companyId: Int, $maxAmount: Int!, $searchTag: String!, $reason: String, $tags: [String]) {
+              requestCreditForCycle(companyId: $companyId, maxAmount: $maxAmount, searchTag: $searchTag, reason: $reason, tags: $tags) {
+                creditNotes {
+                  reason
+                  amount
+                  tags
+                  originating_invoice {
+                    id
+                    type
+                    status
+                    amount_with_tax
+                    company {
+                      id
+                      business_unit {
+                        id
+                      }
+                    }
+                  }
+                }
+                remainder
+              }
+             }
+             """,
+             variables: %{
+               companyId: company_id,
+               maxAmount: max_amount,
+               searchTag: search_tag,
+               tags: tags
+             }
+           },
+           headers()
+         ) do
+      %{
+        "data" => %{
+          "requestCreditForCycle" => %{
+            "creditNotes" => credit_notes,
+            "remainder" => remainder
+          }
+        }
+      } ->
+        credit_notes
+        |> Enum.map(fn credit_note ->
+          credit_note =
+            ExGeeks.Helpers.atomize_keys(credit_note, transformer: &Macro.underscore/1)
+
+          struct(Beeleex.CreditNote, credit_note)
+        end)
+        |> then(fn credit_notes -> {:ok, credit_notes, remainder} end)
 
       %{"data" => _, "errors" => errors} ->
         error = List.first(errors)["message"]

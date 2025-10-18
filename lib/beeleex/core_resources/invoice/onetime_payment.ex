@@ -7,12 +7,14 @@ defmodule Beeleex.OnetimePayment do
   @type t :: %__MODULE__{
           companyId: integer,
           decimalPlaces: integer,
-          pricing: list(InvoiceUpdate.pricing())
+          pricing: list(InvoiceUpdate.pricing()),
+          tags: list(String.t())
         }
 
   defstruct [
     :companyId,
     :decimalPlaces,
-    :pricing
+    :pricing,
+    :tags
   ]
 end
