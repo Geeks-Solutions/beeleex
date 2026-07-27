@@ -4,6 +4,17 @@ defmodule BeeleexWeb.CompaniesLive.Show do
   project linking/unlinking (the LiveView port of the Vue `CompanyDetails.vue`
   screen). Invoices and payment methods are rendered as placeholders here and
   will be filled in by later phases.
+
+  ## Linked projects
+
+  The "Linked projects" section is shown by default. Host apps that derive and
+  link customer projects themselves — so an operator editing them by hand would
+  desync the app's own bookkeeping — can hide it:
+
+      config :beeleex, show_linked_projects: false
+
+  Hiding it also makes the `link_project` / `unlink_project` events inert, so a
+  forged event can't reach the API behind a section the host app disabled.
   """
   use BeeleexWeb, :live_view
 
@@ -18,9 +29,13 @@ defmodule BeeleexWeb.CompaniesLive.Show do
        companies_path: "/companies",
        company: nil,
        unlinked_projects: [],
+       show_linked_projects: show_linked_projects?(),
        bu_token: BeeleexWeb.LiveSession.bu_token(session)
      )}
   end
+
+  defp show_linked_projects?,
+    do: Application.get_env(:beeleex, :show_linked_projects, true)
 
   @impl true
   def handle_params(params, uri, socket) do
@@ -67,6 +82,13 @@ defmodule BeeleexWeb.CompaniesLive.Show do
       {:error, message} ->
         {:noreply, put_flash(socket, :error, message)}
     end
+  end
+
+  # The section is hidden, so there is no button to raise these — ignore them
+  # rather than let a forged event mutate links the host app owns.
+  def handle_event(event, _params, %{assigns: %{show_linked_projects: false}} = socket)
+      when event in ["link_project", "unlink_project"] do
+    {:noreply, socket}
   end
 
   def handle_event("unlink_project", %{"project" => project_id}, socket) do
@@ -173,7 +195,7 @@ defmodule BeeleexWeb.CompaniesLive.Show do
         </dl>
       </section>
 
-      <section class="bx-section">
+      <section :if={@show_linked_projects} class="bx-section">
         <h2 class="bx-subtitle"><%= gettext("Linked projects") %></h2>
         <ul class="bx-list">
           <li :for={project <- @company.customer_projects || []} class="bx-list__item">

@@ -117,6 +117,47 @@ defmodule BeeleexWeb.CompaniesLiveTest do
     end
   end
 
+  describe "Show with show_linked_projects: false" do
+    setup do
+      Application.put_env(:beeleex, :show_linked_projects, false)
+      on_exit(fn -> Application.delete_env(:beeleex, :show_linked_projects) end)
+
+      stub(Beeleex.ApiMock, :get_company, fn _token, "1" -> {:ok, company()} end)
+      :ok
+    end
+
+    test "hides the linked-projects section but keeps the rest of the page", %{conn: conn} do
+      {:ok, _view, html} = live(conn, "/companies/1")
+
+      refute html =~ "Linked projects"
+      refute html =~ "proj-a"
+      refute html =~ "Unlink"
+
+      # Everything else still renders.
+      assert html =~ "Acme Inc"
+      assert html =~ "VAT123"
+      assert html =~ "Invoices"
+      assert html =~ "Payment methods"
+    end
+
+    test "ignores a forged unlink_project event instead of calling the API", %{conn: conn} do
+      # No `expect` for :unlink_project — Mox fails the test if it is called.
+      {:ok, view, _html} = live(conn, "/companies/1")
+
+      html = render_click(view, "unlink_project", %{"project" => "proj-a"})
+
+      refute html =~ "Project unlinked"
+    end
+
+    test "ignores a forged link_project event instead of calling the API", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/companies/1")
+
+      html = render_click(view, "link_project", %{"project" => "proj-b"})
+
+      refute html =~ "Project linked"
+    end
+  end
+
   describe "New" do
     test "creates a company and redirects to it", %{conn: conn} do
       expect(Beeleex.ApiMock, :create_company, fn _token, input ->

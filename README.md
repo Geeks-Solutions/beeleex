@@ -40,6 +40,23 @@ The `BeeleeHandler` module needs to implement the `handle_event/1` callback. For
 
 You could also set the `debug_on` to true in your config if you would like to introspect all events sent to your Business Unit.
 
+#### Optional UI settings
+
+  ```elixir
+  config :beeleex,
+  show_linked_projects: false
+  ```
+
+`show_linked_projects` controls the "Linked projects" section on the company
+details screen — the list of customer projects with their **Unlink** buttons,
+shown by default (`true`).
+
+Set it to `false` when your application derives and links customer projects
+itself: an operator unlinking one by hand would stop Beelee invoicing that
+company without your app knowing. Hiding the section also makes the
+`link_project` / `unlink_project` events inert, so the API can't be reached
+behind a section you disabled.
+
 ## Usage
 ### Token Verification
 When beelee needs to secure actions, it will relay the token verification to your application, the token verifier handler will receive one payload map as a param, the map will contain two keys: `token` and `fields`
