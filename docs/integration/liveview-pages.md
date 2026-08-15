@@ -173,5 +173,18 @@ bundled router. To develop against a **real Beelee BU**, remove the
 `api_module: BeeleexWeb.Dev.SampleApi` option in `BeeleexWeb.Router` and set
 `:business_unit_secure_key`, `:business_unit_id` and `:beelee_endpoint`.
 
+Host applications can also use the sample API in their own dev/test routers:
+
+```elixir
+use Beeleex.Routes,
+  live: true,
+  scope: "/billing",
+  api_module: BeeleexWeb.Dev.SampleApi
+```
+
+`BeeleexWeb.Dev.SampleApi` is compiled from `dev/support`, which Beeleex includes
+only for dependency `:dev` and `:test` compilation. It is not compiled in `:prod`,
+so it is not part of a production release compiled with `MIX_ENV=prod`.
+
 The pages are styled out of the box via the shipped `/beeleex/beeleex.css`
 (see [theming.md](theming.md)); only the JavaScript bundle is built (esbuild).

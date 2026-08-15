@@ -8,6 +8,7 @@ defmodule Beeleex.MixProject do
       elixir: "~> 1.12",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
+      package: package(),
       aliases: aliases(),
       deps: deps()
     ]
@@ -25,8 +26,14 @@ defmodule Beeleex.MixProject do
 
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:dev), do: ["lib", "dev/support"]
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(:test), do: ["lib", "dev/support", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  defp package do
+    [
+      files: ~w(lib dev/support priv mix.exs README.md docs)
+    ]
+  end
 
   # Specifies your project dependencies.
   #
