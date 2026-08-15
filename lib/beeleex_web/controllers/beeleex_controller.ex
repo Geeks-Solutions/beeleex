@@ -12,7 +12,6 @@ defmodule BeeleexWeb.BeeleexController do
   use BeeleexWeb, :controller
   require Logger
   alias Beeleex.Helpers
-  action_fallback(BeeleexWeb.FallbackController)
 
   @doc """
   Verifies a user token
@@ -51,14 +50,29 @@ defmodule BeeleexWeb.BeeleexController do
 
     case apply(action[:module], action[:function], [payload]) do
       {:ok, %{user_id: _user_id, fields: returned_fields} = res} ->
-        if Enum.all?(fields, &(Map.has_key?(returned_fields, &1))) do
+        # `fields` from the request may arrive as a list of names
+        # (`["name", "email"]`) or as a map keyed by name
+        # (`%{"name" => _, ...}`). Normalize to the set of requested names and
+        # compare against the returned keys as strings so the presence check
+        # holds regardless of either side's shape or key type.
+        requested = request_field_names(fields)
+        returned = MapSet.new(returned_fields, fn {k, _v} -> to_string(k) end)
+
+        if Enum.all?(requested, &MapSet.member?(returned, &1)) do
           render(conn, "user_verified.json", res: res)
         else
-          Logger.error("missing requested field(s): returned_fields are #{returned_fields}")
+          missing = Enum.reject(requested, &MapSet.member?(returned, &1))
+          Logger.error("missing requested field(s): #{inspect(missing)}")
           render(conn |> put_status(500), "error.json", error: "missing requested field(s)")
         end
       _ ->
         render(conn |> put_status(400), "error.json", error: "Invalid token")
     end
   end
+
+  # The requested `fields` may be a list of names or a map keyed by name; return
+  # the requested names as strings either way.
+  defp request_field_names(fields) when is_list(fields), do: Enum.map(fields, &to_string/1)
+  defp request_field_names(fields) when is_map(fields), do: Enum.map(Map.keys(fields), &to_string/1)
+  defp request_field_names(_), do: []
 end

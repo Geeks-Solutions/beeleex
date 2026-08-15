@@ -10,7 +10,7 @@ defmodule BeeleexWeb.Endpoint do
     signing_salt: "6cmajPak"
   ]
 
-  # socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
+  socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
 
   # Serve at "/" the static files from "priv/static" directory.
   #
@@ -20,7 +20,7 @@ defmodule BeeleexWeb.Endpoint do
     at: "/",
     from: :beeleex,
     gzip: false,
-    only: ~w(assets fonts images favicon.ico robots.txt)
+    only: ~w(assets beeleex fonts images favicon.ico robots.txt)
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
@@ -39,4 +39,5 @@ defmodule BeeleexWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
+  plug BeeleexWeb.Router
 end

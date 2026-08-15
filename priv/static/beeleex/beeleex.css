@@ -1,0 +1,496 @@
+/*
+ * Beeleex billing UI — default stylesheet.
+ *
+ * Everything is scoped under the `.beeleex` root wrapper (rendered by the
+ * Beeleex live layout) so these rules never leak into the host application.
+ *
+ * THEMING
+ * -------
+ * The look is driven entirely by CSS custom properties. Override any of them in
+ * your own CSS (after this file loads) to match your site. For example:
+ *
+ *   .beeleex {
+ *     --bx-primary: #ff6a00;
+ *     --bx-primary-hover: #e35f00;
+ *     --bx-radius: 4px;
+ *     --bx-font: "Inter", system-ui, sans-serif;
+ *   }
+ *
+ * You can also override per-instance by adding your own class alongside
+ * `.beeleex` and scoping the variables to it.
+ */
+
+.beeleex {
+  /* Palette */
+  --bx-text: #111827;
+  --bx-muted: #6b7280;
+  --bx-bg: transparent;
+  --bx-surface: #ffffff;
+  --bx-surface-alt: #f9fafb;
+  --bx-border: #e5e7eb;
+
+  --bx-primary: #4f46e5;
+  --bx-primary-hover: #4338ca;
+  --bx-primary-contrast: #ffffff;
+
+  --bx-danger: #e11d48;
+  --bx-danger-hover: #be123c;
+  --bx-danger-contrast: #ffffff;
+
+  --bx-success: #047857;
+  --bx-success-bg: #ecfdf5;
+  --bx-warning: #b45309;
+  --bx-warning-bg: #fffbeb;
+  --bx-info-bg: #eef2ff;
+
+  /* Shape & rhythm */
+  --bx-font: inherit;
+  --bx-radius: 0.625rem;
+  --bx-radius-sm: 0.375rem;
+  --bx-gap: 1rem;
+  --bx-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.1);
+  --bx-ring: 0 0 0 3px rgba(79, 70, 229, 0.25);
+
+  color: var(--bx-text);
+  background: var(--bx-bg);
+  font-family: var(--bx-font);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.beeleex *,
+.beeleex *::before,
+.beeleex *::after {
+  box-sizing: border-box;
+}
+
+.bx-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- Layout helpers ---- */
+.bx-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.bx-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--bx-gap);
+  flex-wrap: wrap;
+}
+
+.bx-title {
+  font-size: 1.375rem;
+  font-weight: 650;
+  margin: 0;
+}
+
+.bx-subtitle {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+
+.bx-toolbar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.bx-muted {
+  color: var(--bx-muted);
+}
+
+.bx-section {
+  border-top: 1px solid var(--bx-border);
+  padding-top: 1.25rem;
+}
+
+.bx-card {
+  background: var(--bx-surface);
+  border: 1px solid var(--bx-border);
+  border-radius: var(--bx-radius);
+  box-shadow: var(--bx-shadow);
+  padding: 1.25rem;
+}
+
+/* ---- Links ---- */
+.bx-link {
+  color: var(--bx-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+.bx-link:hover {
+  text-decoration: underline;
+}
+.bx-back {
+  display: inline-block;
+  color: var(--bx-muted);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+.bx-back:hover {
+  color: var(--bx-text);
+}
+
+/* ---- Buttons ---- */
+.bx-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font: inherit;
+  font-weight: 550;
+  line-height: 1;
+  padding: 0.6rem 1rem;
+  border-radius: var(--bx-radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  background: var(--bx-surface);
+  color: var(--bx-text);
+  text-decoration: none;
+}
+.bx-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--bx-ring);
+}
+.bx-btn--primary {
+  background: var(--bx-primary);
+  color: var(--bx-primary-contrast);
+}
+.bx-btn--primary:hover {
+  background: var(--bx-primary-hover);
+}
+.bx-btn--danger {
+  background: var(--bx-danger);
+  color: var(--bx-danger-contrast);
+}
+.bx-btn--danger:hover {
+  background: var(--bx-danger-hover);
+}
+.bx-btn--ghost {
+  background: transparent;
+  border-color: var(--bx-border);
+  color: var(--bx-text);
+}
+.bx-btn--ghost:hover {
+  background: var(--bx-surface-alt);
+}
+.bx-btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Small inline text action used inside table rows/lists. */
+.bx-action {
+  font: inherit;
+  font-size: 0.85rem;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--bx-primary);
+}
+.bx-action:hover {
+  text-decoration: underline;
+}
+.bx-action--danger {
+  color: var(--bx-danger);
+}
+
+/* ---- Forms ---- */
+.bx-field {
+  margin-bottom: 0.85rem;
+}
+.bx-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 550;
+  margin-bottom: 0.3rem;
+  /* Set explicitly so a host app's global `label` color can't wash these out. */
+  color: var(--bx-text);
+}
+.bx-input {
+  display: block;
+  width: 100%;
+  font: inherit;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--bx-border);
+  border-radius: var(--bx-radius-sm);
+  background: var(--bx-surface);
+  color: var(--bx-text);
+}
+.bx-input:focus {
+  outline: none;
+  border-color: var(--bx-primary);
+  box-shadow: var(--bx-ring);
+}
+.bx-input--invalid {
+  border-color: var(--bx-danger);
+}
+.bx-error {
+  margin: 0.3rem 0 0;
+  font-size: 0.8rem;
+  color: var(--bx-danger);
+}
+.bx-fieldset {
+  border: 1px solid var(--bx-border);
+  border-radius: var(--bx-radius-sm);
+  padding: 0.85rem;
+  margin: 0.85rem 0;
+}
+.bx-fieldset > legend {
+  padding: 0 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 550;
+  color: var(--bx-text);
+}
+.bx-form-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+.bx-search {
+  display: flex;
+  gap: 0.5rem;
+}
+.bx-search .bx-input {
+  max-width: 18rem;
+}
+
+/* ---- Description list (key/value details) ---- */
+.bx-dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1.25rem;
+  margin: 0;
+  max-width: 36rem;
+}
+.bx-dl dt {
+  font-weight: 550;
+  color: var(--bx-muted);
+}
+.bx-dl dd {
+  margin: 0;
+}
+
+/* ---- Invoice totals (receipt-style summary) ---- */
+.bx-invoice-totals {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-width: 22rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--bx-border);
+}
+.bx-invoice-totals__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.bx-invoice-totals__row dt {
+  margin: 0;
+  color: var(--bx-muted);
+  font-weight: 500;
+}
+.bx-invoice-totals__row dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.bx-invoice-totals__row--total {
+  margin-top: 0.3rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--bx-border);
+}
+.bx-invoice-totals__row--total dt,
+.bx-invoice-totals__row--total dd {
+  color: var(--bx-text);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+/* ---- Table ---- */
+.bx-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--bx-border);
+  border-radius: var(--bx-radius);
+  background: var(--bx-surface);
+}
+.bx-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.bx-table thead th {
+  text-align: left;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--bx-muted);
+  font-weight: 600;
+  padding: 0.7rem 0.85rem;
+  background: var(--bx-surface-alt);
+  border-bottom: 1px solid var(--bx-border);
+}
+.bx-table tbody td {
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid var(--bx-border);
+  vertical-align: middle;
+}
+.bx-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.bx-table tbody tr.bx-row--clickable {
+  cursor: pointer;
+}
+.bx-table tbody tr.bx-row--clickable:hover {
+  background: var(--bx-surface-alt);
+}
+.bx-table .bx-cell--actions {
+  text-align: right;
+  white-space: nowrap;
+}
+.bx-cell--actions > * + * {
+  margin-left: 0.75rem;
+}
+.bx-table-empty td {
+  text-align: center;
+  color: var(--bx-muted);
+  padding: 1.5rem;
+}
+
+/* ---- Badges (status / default) ---- */
+.bx-badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 550;
+  background: var(--bx-surface-alt);
+  color: var(--bx-muted);
+  border: 1px solid var(--bx-border);
+}
+.bx-badge--success {
+  background: var(--bx-success-bg);
+  color: var(--bx-success);
+  border-color: transparent;
+}
+.bx-badge--warning {
+  background: var(--bx-warning-bg);
+  color: var(--bx-warning);
+  border-color: transparent;
+}
+.bx-badge--danger {
+  background: #fef2f2;
+  color: var(--bx-danger);
+  border-color: transparent;
+}
+
+/* ---- Alerts ---- */
+.bx-alert {
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--bx-radius-sm);
+  margin-bottom: 0.85rem;
+  font-size: 0.9rem;
+}
+.bx-alert--info {
+  background: var(--bx-info-bg);
+  color: var(--bx-primary-hover);
+}
+.bx-alert--error {
+  background: #fef2f2;
+  color: var(--bx-danger-hover);
+}
+
+/* ---- Pagination ---- */
+.bx-pagination {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin-top: 0.85rem;
+}
+.bx-pagination__info {
+  font-size: 0.85rem;
+  color: var(--bx-muted);
+  padding: 0 0.4rem;
+}
+
+/* ---- Lists ---- */
+.bx-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.bx-list__item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* ---- Modal ---- */
+.bx-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+.bx-modal[hidden] {
+  display: none;
+}
+.bx-modal__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.5);
+}
+.bx-modal__content {
+  position: relative;
+  max-width: 30rem;
+  margin: 5rem auto;
+  background: var(--bx-surface);
+  border-radius: var(--bx-radius);
+  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.2);
+  padding: 1.5rem;
+}
+.bx-modal__close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.85rem;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--bx-muted);
+}
+.bx-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* ---- Stripe card element host ---- */
+.bx-card-element {
+  border: 1px solid var(--bx-border);
+  border-radius: var(--bx-radius-sm);
+  padding: 0.7rem;
+  margin-bottom: 0.5rem;
+}

@@ -1,5 +1,8 @@
 import Config
 
+# Run Beeleex's bundled endpoint so the LiveView test suite can reach the pages.
+config :beeleex, start_endpoint: true
+
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
 config :beeleex, BeeleexWeb.Endpoint,
@@ -8,7 +11,7 @@ config :beeleex, BeeleexWeb.Endpoint,
   server: false
 
 # Print only warnings and errors during test
-config :logger, level: :warn
+config :logger, level: :warning
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime

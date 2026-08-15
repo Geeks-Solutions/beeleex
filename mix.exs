@@ -7,7 +7,6 @@ defmodule Beeleex.MixProject do
       version: "0.1.0",
       elixir: "~> 1.12",
       elixirc_paths: elixirc_paths(Mix.env()),
-      compilers: [:gettext] ++ Mix.compilers(),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps()
@@ -25,6 +24,7 @@ defmodule Beeleex.MixProject do
   end
 
   # Specifies which paths to compile per environment.
+  defp elixirc_paths(:dev), do: ["lib", "dev/support"]
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
@@ -33,16 +33,23 @@ defmodule Beeleex.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:phoenix, ">= 1.5.0"},
-      {:telemetry_metrics, "~> 0.6"},
+      {:phoenix, ">= 1.6.15"},
+      {:phoenix_live_view, "~> 0.20 or ~> 1.0"},
+      {:phoenix_html, "~> 4.0"},
+      {:phoenix_view, "~> 2.0"},
+      {:phoenix_live_reload, "~> 1.4", only: :dev},
+      {:esbuild, "~> 0.8", runtime: false},
+      {:telemetry_metrics, "~> 0.6 or ~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:gettext, "~> 0.18"},
+      {:gettext, ">= 0.18.0"},
       {:jason, "~> 1.4"},
       {:plug_cowboy, "~> 2.5"},
       {:ex_geeks,
        git: "https://github.com/Geeks-Solutions/ex_geeks",
        ref: "e0e52754f5cce87eb4775b619969514b8eb861e7"},
       # {:ex_geeks, path: "/Users/julien/Documents/Repos/Gitlab/Geeks/Libraries/ex_geeks"},
+      {:floki, ">= 0.30.0", only: :test},
+      {:mox, "~> 1.1", only: :test},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]
   end

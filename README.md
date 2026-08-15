@@ -1,6 +1,12 @@
 # Beeleex
 
 Beeleex is a helper library that allows you to quickly setup the connections between your business unit and BeeLee.
+
+Full documentation lives under [`docs/`](docs/). Start with
+[`docs/configuration.md`](docs/configuration.md) for installation and route
+mounting, then use [`docs/integration/liveview-pages.md`](docs/integration/liveview-pages.md)
+to wire the optional LiveView billing pages.
+
 ## Installation
 
   In your mix.exs add this to your list of dependencies:
@@ -10,15 +16,26 @@ Beeleex is a helper library that allows you to quickly setup the connections bet
   ```
 ## Configuration
 ### Common Configuration
-To setup Beeleex in a phoenix application, all you need to do is the following (feel free to contribute for other frameworks):
+To setup Beeleex in a Phoenix application, mount the token verification route:
 
-  - In your `router.ex`, add this line:
   ```elixir
   use Beeleex.Routes, scope: "/beeleex"
   ```
-  You can customize the scope and provide the options of your choice to adjust this to your application need.
 
 This provides a standard route to let Beelee verify tokens provided by your application when you are allowing your users to manage their companies, payment methods and browse their invoices.
+
+To also mount the server-rendered billing pages, opt in with `live: true`:
+
+```elixir
+use Beeleex.Routes,
+  live: true,
+  scope: "/billing",
+  live_pipe_through: [:require_admin]
+```
+
+See [`docs/integration/liveview-pages.md`](docs/integration/liveview-pages.md)
+for the full LiveView setup, including session token, stylesheet and payment
+method JavaScript hook wiring.
 
 Then in your `endpoint.ex` add a plug to properly handle webhooks:
 ```elixir
@@ -28,7 +45,9 @@ plug Beeleex.WebhookPlug,
     handler: MyApp.BeeleeHandler
 ```
 
-The `BeeleeHandler` module needs to implement the `handle_event/1` callback. For more details refer to the `Beeleex.WebhookPlug` module documentation.
+The `BeeleeHandler` module needs to implement the `handle_event/1` callback. For
+more details refer to [`docs/webhooks-and-events.md`](docs/webhooks-and-events.md)
+and the `Beeleex.WebhookPlug` module documentation.
 
   - In your `config.ex`, add the following: 
   ```elixir
@@ -39,6 +58,25 @@ The `BeeleeHandler` module needs to implement the `handle_event/1` callback. For
   ```
 
 You could also set the `debug_on` to true in your config if you would like to introspect all events sent to your Business Unit.
+
+See [`docs/configuration.md`](docs/configuration.md) for all configuration keys.
+
+#### Optional UI settings
+
+  ```elixir
+  config :beeleex,
+  show_linked_projects: false
+  ```
+
+`show_linked_projects` controls the "Linked projects" section on the company
+details screen — the list of customer projects with their **Unlink** buttons,
+shown by default (`true`).
+
+Set it to `false` when your application derives and links customer projects
+itself: an operator unlinking one by hand would stop Beelee invoicing that
+company without your app knowing. Hiding the section also makes the
+`link_project` / `unlink_project` events inert, so the API can't be reached
+behind a section you disabled.
 
 ## Usage
 ### Token Verification

@@ -7,28 +7,36 @@ defmodule Beeleex.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      # Start the Telemetry supervisor
-      BeeleexWeb.Telemetry,
-      # Start the PubSub system
-      {Phoenix.PubSub, name: Beeleex.PubSub},
-      # Start the Endpoint (http/https)
-      BeeleexWeb.Endpoint
-      # Start a worker by calling: Beeleex.Worker.start_link(arg)
-      # {Beeleex.Worker, arg}
-    ]
+    # The bundled endpoint/PubSub/Telemetry exist only for Beeleex's own local
+    # development and test suite. When Beeleex is used as a dependency in a host
+    # app, the host serves the LiveView pages through its own endpoint, so we
+    # must NOT start our endpoint (it would try to bind a port and clash).
+    #
+    # Enabled via `config :beeleex, start_endpoint: true` in Beeleex's own
+    # dev/test config; absent (false) in host applications.
+    children =
+      if Application.get_env(:beeleex, :start_endpoint, false) do
+        [
+          BeeleexWeb.Telemetry,
+          {Phoenix.PubSub, name: Beeleex.PubSub},
+          BeeleexWeb.Endpoint
+        ]
+      else
+        []
+      end
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Beeleex.Supervisor]
     Supervisor.start_link(children, opts)
   end
 
-  # Tell Phoenix to update the endpoint configuration
-  # whenever the application is updated.
+  # Tell Phoenix to update the endpoint configuration whenever the application is
+  # updated (only relevant when the bundled endpoint is running).
   @impl true
   def config_change(changed, _new, removed) do
-    BeeleexWeb.Endpoint.config_change(changed, removed)
+    if Application.get_env(:beeleex, :start_endpoint, false) do
+      BeeleexWeb.Endpoint.config_change(changed, removed)
+    end
+
     :ok
   end
 end
