@@ -13,5 +13,12 @@ defmodule BeeleexWeb.Router do
   import Phoenix.Controller
   import Phoenix.LiveView.Router
 
-  use Beeleex.Routes, live: true, scope: "/"
+  api_module =
+    case Mix.env() do
+      :dev -> BeeleexWeb.Dev.SampleApi
+      :test -> Beeleex.ApiMock
+      _ -> Beeleex.Api
+    end
+
+  use Beeleex.Routes, live: true, scope: "/", api_module: api_module
 end

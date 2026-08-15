@@ -1,8 +1,8 @@
 defmodule BeeleexWeb.PaymentMethodsLive.ListComponent do
   @moduledoc """
-  Embeddable list of a company's payment methods (the LiveView port of
-  `PaymentMethodMain.vue`). Supports making a method the default, deactivating
-  and retrying a method, and adding a new card via a Stripe SetupIntent.
+  Embeddable list of a company's payment methods. Supports making a method the
+  default, deactivating and retrying a method, and adding a new card via a Stripe
+  SetupIntent.
 
   ## Adding a card (Stripe)
 
@@ -13,7 +13,7 @@ defmodule BeeleexWeb.PaymentMethodsLive.ListComponent do
   (`priv/static/beeleex/beeleex_hooks.js`) loads Stripe.js, mounts a card
   element, and on confirmation calls `stripe.confirmCardSetup/2`. On success it
   pushes `"payment_method_added"` back to this component, which refreshes the
-  list. See `docs/integration/payment-methods.md` for host wiring.
+  list. See `docs/integration/liveview-pages.md` for host wiring.
 
   ## Required assigns
 
@@ -24,8 +24,6 @@ defmodule BeeleexWeb.PaymentMethodsLive.ListComponent do
   use BeeleexWeb, :live_component
 
   require Logger
-
-  @api Application.compile_env(:beeleex, :api_module, Beeleex.Api)
 
   # Beelee records a freshly added card asynchronously (via a Stripe webhook), so
   # the reload right after "Save card" can race ahead of it and show an empty
@@ -76,7 +74,10 @@ defmodule BeeleexWeb.PaymentMethodsLive.ListComponent do
   defp load(socket) do
     filter = [%{key: "company_id", value: to_string(socket.assigns.company_id)}]
 
-    case @api.get_payment_methods(socket.assigns.bu_token, filter: filter, size: 50) do
+    case socket.assigns.api_module.get_payment_methods(socket.assigns.bu_token,
+           filter: filter,
+           size: 50
+         ) do
       {:ok, %{payment_methods: methods}} ->
         Logger.info(
           "[beeleex] get_payment_methods OK company_id=#{socket.assigns.company_id} " <>
@@ -103,7 +104,11 @@ defmodule BeeleexWeb.PaymentMethodsLive.ListComponent do
   defp schedule_reload(lv_pid, id, before_count, [delay | rest]) do
     Task.start(fn ->
       Process.sleep(delay)
-      Phoenix.LiveView.send_update(lv_pid, __MODULE__, id: id, reload_if_stale: {before_count, rest})
+
+      Phoenix.LiveView.send_update(lv_pid, __MODULE__,
+        id: id,
+        reload_if_stale: {before_count, rest}
+      )
     end)
 
     :ok
@@ -111,7 +116,10 @@ defmodule BeeleexWeb.PaymentMethodsLive.ListComponent do
 
   @impl true
   def handle_event("add_payment_method", _params, socket) do
-    case @api.request_setup_intent(socket.assigns.bu_token, socket.assigns.company_id) do
+    case socket.assigns.api_module.request_setup_intent(
+           socket.assigns.bu_token,
+           socket.assigns.company_id
+         ) do
       {:ok, %{client_secret: secret, publishable_key: key}} ->
         Logger.info(
           "[beeleex] request_setup_intent OK company_id=#{socket.assigns.company_id} " <>
@@ -163,16 +171,24 @@ defmodule BeeleexWeb.PaymentMethodsLive.ListComponent do
 
   def handle_event("make_default", %{"id" => id}, socket) do
     run(socket, fn ->
-      @api.make_default_payment_method(socket.assigns.bu_token, socket.assigns.company_id, id)
+      socket.assigns.api_module.make_default_payment_method(
+        socket.assigns.bu_token,
+        socket.assigns.company_id,
+        id
+      )
     end)
   end
 
   def handle_event("deactivate", %{"id" => id}, socket) do
-    run(socket, fn -> @api.deactivate_payment_method(socket.assigns.bu_token, id) end)
+    run(socket, fn ->
+      socket.assigns.api_module.deactivate_payment_method(socket.assigns.bu_token, id)
+    end)
   end
 
   def handle_event("reactivate", %{"id" => id}, socket) do
-    run(socket, fn -> @api.reactivate_payment_method(socket.assigns.bu_token, id) end)
+    run(socket, fn ->
+      socket.assigns.api_module.reactivate_payment_method(socket.assigns.bu_token, id)
+    end)
   end
 
   defp run(socket, fun) do

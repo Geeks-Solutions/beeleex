@@ -53,6 +53,7 @@ defmodule Beeleex.Routes do
   | `:on_mount` | the billing `live_session` — assign `current_user`, guard, etc. | `[]` |
   | `:root_layout` | the billing `live_session` | `{BeeleexWeb.Layouts, :root}` |
   | `:live_session_name` | the `live_session` name | `:beeleex` |
+  | `:api_module` | API implementation used by the billing LiveViews | `Beeleex.Api` |
 
   ### Embedding in your app's chrome (auth + layout)
 
@@ -89,6 +90,7 @@ defmodule Beeleex.Routes do
     browser_pipes = [:beeleex_browser] ++ Keyword.get(options, :live_pipe_through, [])
     live? = Keyword.get(options, :live, false)
     live_session_name = Keyword.get(options, :live_session_name, :beeleex)
+    api_module = Keyword.get(options, :api_module, Beeleex.Api)
     # root_layout / on_mount are kept as AST and unquoted directly so a host can
     # pass aliased modules (e.g. {MyAppWeb.Layouts, :root}) that resolve in its
     # own context. Defaults are plain terms, which unquote splices fine too.
@@ -122,7 +124,8 @@ defmodule Beeleex.Routes do
 
           live_session unquote(live_session_name),
             root_layout: unquote(root_layout),
-            on_mount: unquote(on_mount) do
+            on_mount: unquote(on_mount),
+            session: %{"beeleex_api_module" => unquote(api_module)} do
             live("/companies", CompaniesLive.Index, :index)
             live("/companies/new", CompaniesLive.Show, :new)
             live("/companies/:id", CompaniesLive.Show, :show)

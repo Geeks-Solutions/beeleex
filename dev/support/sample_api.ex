@@ -3,12 +3,11 @@ defmodule BeeleexWeb.Dev.SampleApi do
   In-memory implementation of `Beeleex.ApiBehaviour` returning canned data.
 
   Used **only** for local development so the bundled endpoint can render the
-  LiveView pages without a real Beelee Business Unit. Wire it up in
-  `config/dev.exs`:
+  LiveView pages without a real Beelee Business Unit. It is compiled from
+  `dev/support` only in `:dev` and wired by `BeeleexWeb.Router`.
 
-      config :beeleex, :api_module, BeeleexWeb.Dev.SampleApi
-
-  To develop against a real Beelee BU instead, remove that line and configure
+  To develop against a real Beelee BU instead, remove the `api_module:
+  BeeleexWeb.Dev.SampleApi` option from `BeeleexWeb.Router` and configure
   `:business_unit_secure_key` / `:business_unit_id` / `:beelee_endpoint`.
   """
   @behaviour Beeleex.ApiBehaviour

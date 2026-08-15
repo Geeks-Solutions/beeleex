@@ -6,8 +6,6 @@ defmodule BeeleexWeb.CompaniesLive.FormComponent do
   """
   use BeeleexWeb, :live_component
 
-  @api Application.compile_env(:beeleex, :api_module, Beeleex.Api)
-
   @fields %{
     name: :string,
     email: :string,
@@ -51,14 +49,18 @@ defmodule BeeleexWeb.CompaniesLive.FormComponent do
   end
 
   defp save(socket, :new, data) do
-    case @api.create_company(socket.assigns.bu_token, to_input(data)) do
+    case socket.assigns.api_module.create_company(socket.assigns.bu_token, to_input(data)) do
       {:ok, company} -> notify(socket, company)
       {:error, message} -> {:noreply, assign(socket, :error_message, message)}
     end
   end
 
   defp save(socket, :edit, data) do
-    case @api.update_company(socket.assigns.bu_token, socket.assigns.company.id, to_input(data)) do
+    case socket.assigns.api_module.update_company(
+           socket.assigns.bu_token,
+           socket.assigns.company.id,
+           to_input(data)
+         ) do
       {:ok, company} -> notify(socket, company)
       {:error, message} -> {:noreply, assign(socket, :error_message, message)}
     end

@@ -2,9 +2,7 @@ defmodule BeeleexWeb.BeeleeComponents do
   @moduledoc """
   Reusable UI building blocks for the Beeleex LiveView pages.
 
-  These are the Phoenix/HEEx counterparts of the shared Vue components used by
-  the legacy back-office SPA (`Table`, `Pagination`, `Popup`, `Alert`,
-  `Inputs`).
+  These are Phoenix/HEEx components used by the bundled LiveView pages.
 
   ## Styling & theming
 
@@ -112,7 +110,7 @@ defmodule BeeleexWeb.BeeleeComponents do
   end
 
   @doc """
-  Flash / alert message (replaces the Vue `Alert` component).
+  Flash / alert message.
   """
   attr :kind, :atom, values: [:info, :error], required: true
   attr :flash, :map, default: %{}
@@ -150,7 +148,7 @@ defmodule BeeleexWeb.BeeleeComponents do
   end
 
   @doc """
-  A modal dialog (replaces the Vue `Popup` component).
+  A modal dialog.
 
   Show/hide it with `show_modal/1` and `hide_modal/1`, or render it open by
   passing `show={true}`. `on_cancel` is a `JS` command run when dismissed.
@@ -197,8 +195,8 @@ defmodule BeeleexWeb.BeeleeComponents do
   end
 
   @doc """
-  A labelled form input (replaces the Vue `Inputs` component). Accepts a
-  `Phoenix.HTML.FormField` via the `field` attribute.
+  A labelled form input. Accepts a `Phoenix.HTML.FormField` via the `field`
+  attribute.
   """
   attr :id, :any, default: nil
   attr :name, :any

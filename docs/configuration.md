@@ -22,6 +22,19 @@ use Beeleex.Routes, scope: "/beeleex"
 This mounts `POST <scope>/verify_token` → `BeeleexController.verify_token`.
 See [token-verification.md](token-verification.md).
 
+To also mount the server-rendered billing pages, opt in with `live: true`:
+
+```elixir
+use Beeleex.Routes,
+  live: true,
+  scope: "/billing",
+  live_pipe_through: [:require_admin]
+```
+
+See [integration/liveview-pages.md](integration/liveview-pages.md) for the full
+LiveView setup, including session token, stylesheet and payment method
+JavaScript hook wiring.
+
 ## 3. Add the webhook plug
 
 In your host app's `endpoint.ex`, **before** `Plug.Parsers`:
@@ -56,6 +69,9 @@ config :beeleex,
 | `beelee_endpoint` | No | `https://beelee.geeks.solutions/v0-1/api` | Beelee GraphQL endpoint. |
 | `debug_on` | No | `false` | When `true`, `Beeleex.debug_variable/2` logs payloads at debug level. |
 | `json_library` | No | `Jason` | JSON library (module, fun, or `{m, f, a}`). |
+| `live_layout` | No | `{BeeleexWeb.Layouts, :live}` | Inner layout used by the LiveView pages. |
+| `bu_token_session_key` | No | `"bu_token"` | Plug session key containing the signed-in user's Beelee token for LiveView pages. |
+| `show_linked_projects` | No | `true` | Controls the linked-projects section on company details. |
 
 > The `business_unit_secure_key` doubles as the webhook secret and the API
 > `secure-key` header — keep it secret and load it from env in production

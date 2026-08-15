@@ -1,10 +1,8 @@
 defmodule BeeleexWeb.InvoicesLive.Show do
   @moduledoc """
-  Read-only view of a single invoice (the LiveView port of `InvoiceDetails.vue`).
+  Read-only view of a single invoice.
   """
   use BeeleexWeb, :live_view
-
-  @api Application.compile_env(:beeleex, :api_module, Beeleex.Api)
 
   @impl true
   def mount(_params, session, socket) do
@@ -12,15 +10,18 @@ defmodule BeeleexWeb.InvoicesLive.Show do
      assign(socket,
        company_path: "/companies",
        invoice: nil,
+       api_module: api_module(session),
        bu_token: BeeleexWeb.LiveSession.bu_token(session)
      )}
   end
+
+  defp api_module(session), do: Map.get(session, "beeleex_api_module", Beeleex.Api)
 
   @impl true
   def handle_params(%{"id" => company_id, "invoice_id" => invoice_id}, uri, socket) do
     company_path = companies_base(uri) <> "/#{company_id}"
 
-    case @api.get_invoice(socket.assigns.bu_token, invoice_id) do
+    case socket.assigns.api_module.get_invoice(socket.assigns.bu_token, invoice_id) do
       {:ok, invoice} ->
         {:noreply,
          socket

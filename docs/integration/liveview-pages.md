@@ -1,9 +1,8 @@
 # LiveView billing pages (Elixir-native)
 
-These are the **Phoenix LiveView** port of the legacy Vue back-office screens.
-A host application that depends on `beeleex` can mount ready-made, server-
-rendered billing pages with a one-line router macro — no SPA, no GraphQL client,
-and no Beelee tokens in the browser.
+These **Phoenix LiveView** pages let a host application that depends on
+`beeleex` mount ready-made, server-rendered billing pages with a one-line router
+macro — no SPA, no GraphQL client, and no Beelee tokens in the browser.
 
 > **Status:** ships the **Companies** screens (list + details, including
 > create/edit/delete and customer-project linking), the **Invoices** screens
@@ -28,9 +27,8 @@ and thread it into every `Beeleex.Api` call as `bu-authorization`. It is never
 exposed to the browser. The host app must place that token in the Plug session
 (e.g. in its auth pipeline) before the user reaches these pages.
 
-The LiveViews resolve their API module via
-`Application.compile_env(:beeleex, :api_module, Beeleex.Api)`, so production uses
-`Beeleex.Api` and tests inject a mock.
+The LiveViews use `Beeleex.Api` by default. Tests or local harnesses can inject
+another module with the router macro's `:api_module` option.
 
 ## Mounting the pages
 
@@ -39,7 +37,7 @@ In your application's router:
 ```elixir
 defmodule MyAppWeb.Router do
   use MyAppWeb, :router
-  use Beeleex.Routes, live: true, scope: "/billing", pipe_through: [:require_admin]
+  use Beeleex.Routes, live: true, scope: "/billing", live_pipe_through: [:require_admin]
 end
 ```
 
@@ -62,12 +60,15 @@ This mounts, under `:scope` (default `/beeleex`):
 |--------|---------|---------|
 | `:live` | `false` | Set `true` to mount the billing LiveView pages |
 | `:scope` | `"/beeleex"` | URL scope for all mounted routes |
-| `:pipe_through` | `[]` | Extra pipelines appended after `:beeleex_browser` (pages) and `:beeleex_api` (verify_token) — use this to require authentication/authorization |
+| `:pipe_through` | `[]` | Extra pipelines appended after `:beeleex_api` for `verify_token` |
+| `:live_pipe_through` | `[]` | Extra pipelines appended after `:beeleex_browser` for the LiveView pages — use this to require authentication/authorization |
+| `:on_mount` | `[]` | Hooks for the billing `live_session` |
 | `:root_layout` | `{BeeleexWeb.Layouts, :root}` | Root layout for the `live_session`; pass your own to embed the pages in your app's chrome |
+| `:api_module` | `Beeleex.Api` | Module used by the LiveView pages; useful for tests or the bundled dev harness |
 
 The pages run through the macro-provided `:beeleex_browser` pipeline
 (`fetch_session`, `fetch_live_flash`, `protect_from_forgery`,
-`put_secure_browser_headers`). Append your own auth pipeline via `:pipe_through`.
+`put_secure_browser_headers`). Append your own auth pipeline via `:live_pipe_through`.
 
 ## Host requirements
 
@@ -122,17 +123,31 @@ These request only non-sensitive fields (they deliberately omit secrets such as
 ## JavaScript hook (payment methods only)
 
 Adding a card requires the `BeeleexStripeSetup` hook to be registered with your
-`LiveSocket`. See [payment-methods.md](payment-methods.md#stripe-wiring-elixir-native)
-for the one-time `app.js` setup. The rest of the pages need no JavaScript beyond
-the standard LiveView client.
+`LiveSocket`. The rest of the pages need no JavaScript beyond the standard
+LiveView client.
+
+```js
+// assets/js/app.js
+import { Socket } from "phoenix"
+import { LiveSocket } from "phoenix_live_view"
+import { BeeleexHooks } from "../../deps/beeleex/priv/static/beeleex/beeleex_hooks.js"
+
+const liveSocket = new LiveSocket("/live", Socket, {
+  params: { _csrf_token: csrfToken },
+  hooks: { ...BeeleexHooks }
+})
+```
+
+No Stripe keys are configured in the host app: the publishable key comes from
+Beelee via `request_setup_intent/2`, and Stripe.js is loaded on demand from
+`https://js.stripe.com/v3`.
 
 ## Testing in your app
 
 The pages are covered by `test/beeleex_web/live/companies_live_test.exs` using
 `Phoenix.LiveViewTest` against a Mox mock of `Beeleex.ApiBehaviour`. To test your
-own integration, set `config :beeleex, :api_module, MyApp.BeeleexApiMock` in
-`config/test.exs` and define a mock with
-`Mox.defmock(MyApp.BeeleexApiMock, for: Beeleex.ApiBehaviour)`.
+own integration, mount the routes with `api_module: MyApp.BeeleexApiMock` and
+define a mock with `Mox.defmock(MyApp.BeeleexApiMock, for: Beeleex.ApiBehaviour)`.
 
 ## Local development (see the pages)
 
@@ -153,9 +168,9 @@ Then open:
 * `http://localhost:4000/companies/1` — details (with invoices + payment methods)
 * `http://localhost:4000/companies/1/invoices/1001` — invoice detail
 
-By default dev uses `BeeleexWeb.Dev.SampleApi` (canned data), wired in
-`config/dev.exs`. To develop against a **real Beelee BU**, remove the
-`config :beeleex, :api_module, BeeleexWeb.Dev.SampleApi` line and set
+By default dev uses `BeeleexWeb.Dev.SampleApi` (canned data), wired through the
+bundled router. To develop against a **real Beelee BU**, remove the
+`api_module: BeeleexWeb.Dev.SampleApi` option in `BeeleexWeb.Router` and set
 `:business_unit_secure_key`, `:business_unit_id` and `:beelee_endpoint`.
 
 The pages are styled out of the box via the shipped `/beeleex/beeleex.css`

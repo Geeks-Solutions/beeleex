@@ -18,11 +18,6 @@ config :beeleex, BeeleexWeb.Endpoint,
     esbuild: {Esbuild, :install_and_run, [:beeleex, ~w(--sourcemap=inline --watch)]}
   ]
 
-# Demo data so the billing pages render without a real Beelee Business Unit.
-# Remove this line (and set :business_unit_secure_key / :business_unit_id /
-# :beelee_endpoint) to develop against a real Beelee BU.
-config :beeleex, :api_module, BeeleexWeb.Dev.SampleApi
-
 # ## SSL Support
 #
 # In order to use HTTPS in development, a self-signed

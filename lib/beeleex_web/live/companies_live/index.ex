@@ -1,11 +1,10 @@
 defmodule BeeleexWeb.CompaniesLive.Index do
   @moduledoc """
-  Lists the Business Unit's companies (the LiveView port of the Vue
-  `ListCompanies.vue` screen). Data is fetched server-side via `Beeleex.Api`.
+  Lists the Business Unit's companies. Data is fetched server-side via the
+  injected API module.
   """
   use BeeleexWeb, :live_view
 
-  @api Application.compile_env(:beeleex, :api_module, Beeleex.Api)
   @page_size 20
 
   @impl true
@@ -14,9 +13,12 @@ defmodule BeeleexWeb.CompaniesLive.Index do
      assign(socket,
        page_title: gettext("Companies"),
        companies_path: "/companies",
+       api_module: api_module(session),
        bu_token: BeeleexWeb.LiveSession.bu_token(session)
      )}
   end
+
+  defp api_module(session), do: Map.get(session, "beeleex_api_module", Beeleex.Api)
 
   @impl true
   def handle_params(params, uri, socket) do
@@ -50,7 +52,7 @@ defmodule BeeleexWeb.CompaniesLive.Index do
   defp fetch_companies(socket, page, q) do
     skip = (page - 1) * @page_size
 
-    case @api.get_companies(socket.assigns.bu_token,
+    case socket.assigns.api_module.get_companies(socket.assigns.bu_token,
            filter: build_filter(q),
            size: @page_size,
            skip: skip

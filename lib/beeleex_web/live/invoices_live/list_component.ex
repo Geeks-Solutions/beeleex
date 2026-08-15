@@ -1,7 +1,7 @@
 defmodule BeeleexWeb.InvoicesLive.ListComponent do
   @moduledoc """
-  Embeddable, paginated list of a company's invoices (the LiveView port of the
-  embedded `InvoicesMain.vue` screen). Rendered inside the company details page.
+  Embeddable, paginated list of a company's invoices. Rendered inside the
+  company details page.
 
   Pagination is event-driven (within the component) rather than URL-driven, so
   it can be dropped into any parent LiveView.
@@ -15,7 +15,6 @@ defmodule BeeleexWeb.InvoicesLive.ListComponent do
   """
   use BeeleexWeb, :live_component
 
-  @api Application.compile_env(:beeleex, :api_module, Beeleex.Api)
   @page_size 10
 
   @impl true
@@ -44,7 +43,11 @@ defmodule BeeleexWeb.InvoicesLive.ListComponent do
     skip = (page - 1) * @page_size
     filter = [%{key: "company_id", value: to_string(socket.assigns.company_id)}]
 
-    case @api.get_invoices(socket.assigns.bu_token, filter: filter, size: @page_size, skip: skip) do
+    case socket.assigns.api_module.get_invoices(socket.assigns.bu_token,
+           filter: filter,
+           size: @page_size,
+           skip: skip
+         ) do
       {:ok, %{invoices: invoices, total: total}} ->
         socket
         |> assign(invoices: invoices, total: total, page: page, size: @page_size, loaded: true)

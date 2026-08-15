@@ -2,10 +2,9 @@ defmodule Beeleex.ApiBehaviour do
   @moduledoc """
   Behaviour for the subset of `Beeleex.Api` used by the LiveView pages.
 
-  The LiveViews resolve their API module via
-  `Application.compile_env(:beeleex, :api_module, Beeleex.Api)`, which lets tests
-  inject a mock implementing this behaviour (see `Beeleex.ApiMock` in the test
-  suite).
+  The LiveViews use `Beeleex.Api` by default. Tests and local harnesses can pass
+  another module with `use Beeleex.Routes, api_module: MyApi`, as long as it
+  implements this behaviour.
   """
 
   alias Beeleex.Company

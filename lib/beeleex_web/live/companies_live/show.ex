@@ -1,9 +1,8 @@
 defmodule BeeleexWeb.CompaniesLive.Show do
   @moduledoc """
   Shows a single company and supports create / edit / delete plus customer
-  project linking/unlinking (the LiveView port of the Vue `CompanyDetails.vue`
-  screen). Invoices and payment methods are rendered as placeholders here and
-  will be filled in by later phases.
+  project linking/unlinking. Invoices and payment methods are embedded below
+  the company details.
 
   ## Linked projects
 
@@ -20,8 +19,6 @@ defmodule BeeleexWeb.CompaniesLive.Show do
 
   alias BeeleexWeb.CompaniesLive.FormComponent
 
-  @api Application.compile_env(:beeleex, :api_module, Beeleex.Api)
-
   @impl true
   def mount(_params, session, socket) do
     {:ok,
@@ -29,10 +26,13 @@ defmodule BeeleexWeb.CompaniesLive.Show do
        companies_path: "/companies",
        company: nil,
        unlinked_projects: [],
+       api_module: api_module(session),
        show_linked_projects: show_linked_projects?(),
        bu_token: BeeleexWeb.LiveSession.bu_token(session)
      )}
   end
+
+  defp api_module(session), do: Map.get(session, "beeleex_api_module", Beeleex.Api)
 
   defp show_linked_projects?,
     do: Application.get_env(:beeleex, :show_linked_projects, true)
@@ -54,7 +54,7 @@ defmodule BeeleexWeb.CompaniesLive.Show do
   # `verify_token` callback. Load only once the socket is connected.
   defp apply_action(socket, action, %{"id" => id}) when action in [:show, :edit] do
     if connected?(socket) do
-      case @api.get_company(socket.assigns.bu_token, id) do
+      case socket.assigns.api_module.get_company(socket.assigns.bu_token, id) do
         {:ok, company} ->
           socket
           |> assign(:page_title, company.name || gettext("Company"))
@@ -72,7 +72,10 @@ defmodule BeeleexWeb.CompaniesLive.Show do
 
   @impl true
   def handle_event("delete", _params, socket) do
-    case @api.delete_company(socket.assigns.bu_token, socket.assigns.company.id) do
+    case socket.assigns.api_module.delete_company(
+           socket.assigns.bu_token,
+           socket.assigns.company.id
+         ) do
       {:ok, _message} ->
         {:noreply,
          socket
@@ -92,7 +95,11 @@ defmodule BeeleexWeb.CompaniesLive.Show do
   end
 
   def handle_event("unlink_project", %{"project" => project_id}, socket) do
-    case @api.unlink_project(socket.assigns.bu_token, socket.assigns.company.id, project_id) do
+    case socket.assigns.api_module.unlink_project(
+           socket.assigns.bu_token,
+           socket.assigns.company.id,
+           project_id
+         ) do
       {:ok, company} ->
         {:noreply,
          socket
@@ -105,7 +112,11 @@ defmodule BeeleexWeb.CompaniesLive.Show do
   end
 
   def handle_event("link_project", %{"project" => project_id}, socket) do
-    case @api.link_projects(socket.assigns.bu_token, socket.assigns.company.id, [project_id]) do
+    case socket.assigns.api_module.link_projects(
+           socket.assigns.bu_token,
+           socket.assigns.company.id,
+           [project_id]
+         ) do
       {:ok, company} ->
         {:noreply,
          socket
@@ -124,7 +135,7 @@ defmodule BeeleexWeb.CompaniesLive.Show do
 
   # Payment methods changed: refresh the company so the counts stay in sync.
   def handle_info({:payment_methods_updated, _company_id}, socket) do
-    case @api.get_company(socket.assigns.bu_token, socket.assigns.company.id) do
+    case socket.assigns.api_module.get_company(socket.assigns.bu_token, socket.assigns.company.id) do
       {:ok, company} -> {:noreply, assign(socket, :company, company)}
       {:error, _} -> {:noreply, socket}
     end
@@ -155,6 +166,7 @@ defmodule BeeleexWeb.CompaniesLive.Show do
           id={@company.id || :new}
           action={@live_action}
           company={@company}
+          api_module={@api_module}
           bu_token={@bu_token}
           return_to={@companies_path}
         />
@@ -223,6 +235,7 @@ defmodule BeeleexWeb.CompaniesLive.Show do
           id={"company-#{@company.id}-invoices"}
           company_id={@company.id}
           bu_token={@bu_token}
+          api_module={@api_module}
           companies_path={@companies_path}
         />
       </section>
@@ -234,6 +247,7 @@ defmodule BeeleexWeb.CompaniesLive.Show do
           id={"company-#{@company.id}-payment-methods"}
           company_id={@company.id}
           bu_token={@bu_token}
+          api_module={@api_module}
         />
       </section>
 
