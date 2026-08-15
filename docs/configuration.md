@@ -35,6 +35,18 @@ See [integration/liveview-pages.md](integration/liveview-pages.md) for the full
 LiveView setup, including session token, stylesheet and payment method
 JavaScript hook wiring.
 
+In dev/test you can wire the canned sample API instead of calling Beelee:
+
+```elixir
+use Beeleex.Routes,
+  live: true,
+  scope: "/billing",
+  api_module: BeeleexWeb.Dev.SampleApi
+```
+
+`BeeleexWeb.Dev.SampleApi` is available only when Beeleex is compiled in `:dev`
+or `:test`; it is excluded from `:prod` compilation and production releases.
+
 ## 3. Add the webhook plug
 
 In your host app's `endpoint.ex`, **before** `Plug.Parsers`:
