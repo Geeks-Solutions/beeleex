@@ -1,7 +1,6 @@
 defmodule BeeleexWeb.ConnCase do
   @moduledoc """
-  This module defines the test case to be used by
-  tests that require setting up a connection.
+  Test case for tests that need a Phoenix connection.
 
   Such tests rely on `Phoenix.ConnTest` and also
   import other functionality to make it easier

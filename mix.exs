@@ -20,7 +20,7 @@ defmodule Beeleex.MixProject do
   def application do
     [
       mod: {Beeleex.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: extra_applications(Mix.env())
     ]
   end
 
@@ -28,6 +28,9 @@ defmodule Beeleex.MixProject do
   defp elixirc_paths(:dev), do: ["lib", "dev/support"]
   defp elixirc_paths(:test), do: ["lib", "dev/support", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  defp extra_applications(:test), do: [:logger, :runtime_tools, :phoenix_ecto]
+  defp extra_applications(_), do: [:logger, :runtime_tools]
 
   defp package do
     [
@@ -43,6 +46,7 @@ defmodule Beeleex.MixProject do
       {:phoenix, ">= 1.6.15"},
       {:phoenix_live_view, "~> 0.20 or ~> 1.0"},
       {:phoenix_html, "~> 4.0"},
+      {:phoenix_ecto, "~> 4.6", only: :test, optional: true},
       {:phoenix_view, "~> 2.0"},
       {:phoenix_live_reload, "~> 1.4", only: :dev},
       {:esbuild, "~> 0.8", runtime: false},
@@ -53,11 +57,16 @@ defmodule Beeleex.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:ex_geeks,
        git: "https://github.com/Geeks-Solutions/ex_geeks",
-       ref: "e0e52754f5cce87eb4775b619969514b8eb861e7"},
+       ref: "9dfc2b93b2be6ac577a6643b230cb354abed7b1d"},
       # {:ex_geeks, path: "/Users/julien/Documents/Repos/Gitlab/Geeks/Libraries/ex_geeks"},
       {:floki, ">= 0.30.0", only: :test},
       {:mox, "~> 1.1", only: :test},
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+
+      # Code Quality
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:ex_dna, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:ex_slop, "~> 0.4", only: [:dev, :test], runtime: false},
+      {:excoveralls, "~> 0.18", only: :test}
     ]
   end
 
@@ -69,7 +78,12 @@ defmodule Beeleex.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get"]
+      setup: ["deps.get"],
+      q: [
+        "format --check-formatted",
+        "compile --warnings-as-errors",
+        "credo --strict"
+      ]
     ]
   end
 end

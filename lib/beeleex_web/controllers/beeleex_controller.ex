@@ -1,8 +1,6 @@
 defmodule BeeleexWeb.BeeleexController do
   @moduledoc """
-  The beeleex Controller handles the beeleex endpoints.
-
-  Check the routes for mapping to the right controller function.
+  Phoenix controller for the token-verification endpoint mounted by host apps.
 
   Note:
 
@@ -65,6 +63,7 @@ defmodule BeeleexWeb.BeeleexController do
           Logger.error("missing requested field(s): #{inspect(missing)}")
           render(conn |> put_status(500), "error.json", error: "missing requested field(s)")
         end
+
       _ ->
         render(conn |> put_status(400), "error.json", error: "Invalid token")
     end
@@ -73,6 +72,9 @@ defmodule BeeleexWeb.BeeleexController do
   # The requested `fields` may be a list of names or a map keyed by name; return
   # the requested names as strings either way.
   defp request_field_names(fields) when is_list(fields), do: Enum.map(fields, &to_string/1)
-  defp request_field_names(fields) when is_map(fields), do: Enum.map(Map.keys(fields), &to_string/1)
+
+  defp request_field_names(fields) when is_map(fields),
+    do: Enum.map(Map.keys(fields), &to_string/1)
+
   defp request_field_names(_), do: []
 end

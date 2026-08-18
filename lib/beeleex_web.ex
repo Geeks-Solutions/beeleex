@@ -22,7 +22,7 @@ defmodule BeeleexWeb do
       use Phoenix.Controller, namespace: BeeleexWeb
 
       import Plug.Conn
-      import BeeleexWeb.Gettext
+      use Gettext, backend: BeeleexWeb.Gettext
       alias BeeleexWeb.Router.Helpers, as: Routes
     end
   end
@@ -89,7 +89,7 @@ defmodule BeeleexWeb do
   def channel do
     quote do
       use Phoenix.Channel
-      import BeeleexWeb.Gettext
+      use Gettext, backend: BeeleexWeb.Gettext
     end
   end
 
@@ -99,7 +99,7 @@ defmodule BeeleexWeb do
       import Phoenix.View
 
       import BeeleexWeb.ErrorHelpers
-      import BeeleexWeb.Gettext
+      use Gettext, backend: BeeleexWeb.Gettext
       alias BeeleexWeb.Router.Helpers, as: Routes
     end
   end
@@ -114,7 +114,7 @@ defmodule BeeleexWeb do
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS
 
-      import BeeleexWeb.Gettext
+      use Gettext, backend: BeeleexWeb.Gettext
       alias BeeleexWeb.Router.Helpers, as: Routes
     end
   end

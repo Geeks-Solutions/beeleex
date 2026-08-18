@@ -43,11 +43,10 @@ defmodule Beeleex.Api do
   defp to_int(value) when is_integer(value), do: value
   defp to_int(value) when is_binary(value), do: String.to_integer(value)
 
-  # Masks a secret for debug logging: keeps only the last 4 chars.
-  defp mask(""), do: "<empty>"
-
-  defp mask(value) when is_binary(value) do
-    "***" <> String.slice(value, -4, 4) <> " (len=#{String.length(value)})"
+  defp error_response(function, errors) do
+    error = List.first(errors)["message"]
+    Logger.error("#{elem(function, 0)}: #{error}")
+    {:error, error}
   end
 
   @doc """
@@ -78,9 +77,7 @@ defmodule Beeleex.Api do
         {:ok, message}
 
       %{"data" => _, "errors" => errors} ->
-        error = List.first(errors)["message"]
-        Logger.error("#{__ENV__.function |> elem(0)}: #{error}")
-        {:error, error}
+        error_response(__ENV__.function, errors)
     end
   end
 
@@ -140,9 +137,7 @@ defmodule Beeleex.Api do
         |> then(fn company -> {:ok, struct(Beeleex.Company, company)} end)
 
       %{"data" => _, "errors" => errors} ->
-        error = List.first(errors)["message"]
-        Logger.error("#{__ENV__.function |> elem(0)}: #{error}")
-        {:error, error}
+        error_response(__ENV__.function, errors)
     end
   end
 
@@ -183,9 +178,7 @@ defmodule Beeleex.Api do
         |> then(fn company -> {:ok, struct(Beeleex.Invoice, company)} end)
 
       %{"data" => _, "errors" => errors} ->
-        error = List.first(errors)["message"]
-        Logger.error("#{__ENV__.function |> elem(0)}: #{error}")
-        {:error, error}
+        error_response(__ENV__.function, errors)
     end
   end
 
@@ -250,9 +243,7 @@ defmodule Beeleex.Api do
         |> then(fn invoices -> {:ok, invoices} end)
 
       %{"data" => _, "errors" => errors} ->
-        error = List.first(errors)["message"]
-        Logger.error("#{__ENV__.function |> elem(0)}: #{error}")
-        {:error, error}
+        error_response(__ENV__.function, errors)
     end
   end
 
@@ -302,9 +293,7 @@ defmodule Beeleex.Api do
         |> then(fn credit_note -> {:ok, struct(Beeleex.CreditNote, credit_note)} end)
 
       %{"data" => _, "errors" => errors} ->
-        error = List.first(errors)["message"]
-        Logger.error("#{__ENV__.function |> elem(0)}: #{error}")
-        {:error, error}
+        error_response(__ENV__.function, errors)
     end
   end
 
@@ -365,9 +354,7 @@ defmodule Beeleex.Api do
         |> then(fn credit_notes -> {:ok, credit_notes} end)
 
       %{"data" => _, "errors" => errors} ->
-        error = List.first(errors)["message"]
-        Logger.error("#{__ENV__.function |> elem(0)}: #{error}")
-        {:error, error}
+        error_response(__ENV__.function, errors)
     end
   end
 
@@ -434,9 +421,7 @@ defmodule Beeleex.Api do
         |> then(fn credit_notes -> {:ok, credit_notes, remainder} end)
 
       %{"data" => _, "errors" => errors} ->
-        error = List.first(errors)["message"]
-        Logger.error("#{__ENV__.function |> elem(0)}: #{error}")
-        {:error, error}
+        error_response(__ENV__.function, errors)
     end
   end
 
@@ -844,11 +829,11 @@ defmodule Beeleex.Api do
     payment_method_status_mutation(
       token,
       """
-      mutation deactivatePaymentMethod($id:Int!) {
+      mutation deactivatePaymentMethod($id: Int!) {
         deactivatePaymentMethod(id:$id) { status }
       }
       """,
-      %{id: id},
+      %{id: to_int(id)},
       "deactivatePaymentMethod",
       "deactivate_payment_method"
     )
@@ -863,11 +848,11 @@ defmodule Beeleex.Api do
     payment_method_status_mutation(
       token,
       """
-      mutation retryPaymentMethod($id:Int!) {
+      mutation retryPaymentMethod($id: Int!) {
         retryPaymentMethod(id:$id) { status }
       }
       """,
-      %{id: id},
+      %{id: to_int(id)},
       "retryPaymentMethod",
       "reactivate_payment_method"
     )
@@ -884,13 +869,16 @@ defmodule Beeleex.Api do
            url(),
            %{
              query: """
-             mutation changeDefaultPaymentMethod($companyId:Int!, $paymentId:Int!) {
-               changeDefaultPaymentMethod(companyId:$companyId, paymentMethodId:$paymentId) {
+             mutation changeDefaultPaymentMethod($companyId:Int!, $paymentMethodId:Int!) {
+               changeDefaultPaymentMethod(
+                 companyId:$companyId,
+                 paymentMethodId:$paymentMethodId
+               ) {
                  type
                }
              }
              """,
-             variables: %{companyId: company_id, paymentId: payment_id}
+             variables: %{companyId: to_int(company_id), paymentMethodId: to_int(payment_id)}
            },
            ui_headers(token)
          ) do

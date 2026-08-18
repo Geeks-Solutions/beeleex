@@ -48,6 +48,7 @@ const BeeleexStripeSetup = {
     this.stripe = null;
     this.card = null;
     this.clientSecret = null;
+    this.confirmButton = null;
 
     this.handleEvent("beeleex:init_stripe", (payload) => {
       // Only react to events targeted at this component instance.
@@ -61,6 +62,7 @@ const BeeleexStripeSetup = {
   },
 
   async initStripe({ client_secret, publishable_key }) {
+    this.setStatus("Loading secure card form...");
     this.clientSecret = client_secret;
 
     try {
@@ -78,6 +80,8 @@ const BeeleexStripeSetup = {
   mountCard() {
     const container = this.el.querySelector("[data-beeleex-card-element]");
     const confirmButton = this.el.querySelector("[data-beeleex-confirm-card]");
+    this.confirmButton = confirmButton;
+
     if (!container || !confirmButton) return;
 
     if (!this.stripe) {
@@ -98,6 +102,9 @@ const BeeleexStripeSetup = {
       return;
     }
 
+    this.setStatus("Ready to save your card.");
+    this.setError("");
+
     this.card.on("change", (event) => this.setError(event.error ? event.error.message : ""));
 
     // Avoid stacking duplicate click handlers across re-opens.
@@ -107,6 +114,7 @@ const BeeleexStripeSetup = {
   },
 
   async confirmCard(confirmButton) {
+    this.setStatus(this.getLoadingLabel(confirmButton, "Validating card..."));
     console.log("[beeleex] confirmCard clicked", {
       hasStripe: !!this.stripe,
       hasClientSecret: !!this.clientSecret,
@@ -115,19 +123,31 @@ const BeeleexStripeSetup = {
 
     if (!this.stripe || !this.clientSecret) {
       console.warn("[beeleex] confirmCard aborted: stripe or clientSecret missing");
+      this.setStatus("Stripe is not ready. Please try again.");
       return;
     }
-    confirmButton.disabled = true;
+    this.setLoading(confirmButton, true);
+    this.setError("");
 
-    const result = await this.stripe.confirmCardSetup(this.clientSecret, {
-      payment_method: {
-        card: this.card,
-        // Stripe metadata values must be strings.
-        metadata: { beelee: "true" }
-      }
-    });
+    let result;
+    try {
+      result = await this.stripe.confirmCardSetup(this.clientSecret, {
+        payment_method: {
+          card: this.card,
+          // Stripe metadata values must be strings.
+          metadata: { beelee: "true" }
+        }
+      });
+    } catch (error) {
+      this.setLoading(confirmButton, false);
+      const message = error && error.message ? error.message : "Could not validate the card.";
+      console.error("[beeleex] confirmCardSetup exception:", message);
+      this.setStatus(message);
+      this.setError(message);
+      return;
+    }
 
-    confirmButton.disabled = false;
+    this.setLoading(confirmButton, false);
 
     console.log("[beeleex] confirmCardSetup result", {
       error: result.error,
@@ -138,11 +158,13 @@ const BeeleexStripeSetup = {
     if (result.error) {
       console.error("[beeleex] confirmCardSetup error:", result.error.message);
       this.setError(result.error.message);
+      this.setStatus(result.error.message || "Could not validate the card.");
       return;
     }
 
     if (result.setupIntent && result.setupIntent.status === "succeeded") {
       this.setError("");
+      this.setStatus("Card validated. Saving payment method...");
       console.log("[beeleex] pushing payment_method_added ->", result.setupIntent.payment_method);
       // Notify the owning LiveComponent so it can refresh its list.
       this.pushEventTo(this.el, "payment_method_added", {
@@ -153,7 +175,31 @@ const BeeleexStripeSetup = {
         "[beeleex] setupIntent did not succeed; status =",
         result.setupIntent && result.setupIntent.status
       );
+      this.setStatus(
+        result.setupIntent && result.setupIntent.status
+          ? `Setup status: ${result.setupIntent.status}`
+          : "Could not save the card."
+      );
     }
+  },
+
+  setLoading(button, loading) {
+    if (!button) return;
+    const label = button.getAttribute("data-beeleex-confirm-label") || "Save card";
+    const loadingLabel = button.getAttribute("data-beeleex-validating-label") || "Validating card...";
+
+    button.disabled = !!loading;
+    button.textContent = loading ? loadingLabel : label;
+  },
+
+  getLoadingLabel(button, fallback) {
+    if (!button) return fallback;
+    return button.getAttribute("data-beeleex-validating-label") || fallback;
+  },
+
+  setStatus(message) {
+    const node = this.el.querySelector("[data-beeleex-card-status]");
+    if (node) node.textContent = message || "";
   },
 
   setError(message) {

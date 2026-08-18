@@ -16,7 +16,7 @@ defmodule BeeleexWeb.BeeleeComponents do
   use Phoenix.Component
 
   alias Phoenix.LiveView.JS
-  import BeeleexWeb.Gettext
+  use Gettext, backend: BeeleexWeb.Gettext
 
   @doc """
   A generic data table.
@@ -118,7 +118,8 @@ defmodule BeeleexWeb.BeeleeComponents do
   slot :inner_block
 
   def flash_alert(assigns) do
-    assigns = assign_new(assigns, :message, fn -> Phoenix.Flash.get(assigns.flash, assigns.kind) end)
+    assigns =
+      assign_new(assigns, :message, fn -> Phoenix.Flash.get(assigns.flash, assigns.kind) end)
 
     ~H"""
     <p

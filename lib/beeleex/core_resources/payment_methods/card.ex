@@ -4,11 +4,11 @@ defmodule Beeleex.PaymentMethod.Card do
   """
 
   @type t :: %__MODULE__{
-    brand: String.t(),
-    last_four: integer,
-    expiry_year: integer,
-    expiry_month: integer
-  }
+          brand: String.t(),
+          last_four: integer,
+          expiry_year: integer,
+          expiry_month: integer
+        }
 
   @derive Jason.Encoder
   defstruct [

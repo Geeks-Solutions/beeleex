@@ -418,6 +418,32 @@
   color: var(--bx-danger-hover);
 }
 
+.bx-inline-feedback {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bx-spinner {
+  width: 0.85rem;
+  height: 0.85rem;
+  border: 2px solid rgba(79, 70, 229, 0.25);
+  border-top-color: var(--bx-primary);
+  border-radius: 50%;
+  animation: bx-spin 0.75s linear infinite;
+}
+
+.bx-spinner--info {
+  border-color: rgba(79, 70, 229, 0.25);
+  border-top-color: var(--bx-primary);
+}
+
+@keyframes bx-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* ---- Pagination ---- */
 .bx-pagination {
   display: flex;
