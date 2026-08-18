@@ -363,26 +363,28 @@ defmodule BeeleexWeb.PaymentMethodsLive.ListComponent do
         </:col>
         <:col :let={pm} label={gettext("Expires")}><%= card_expiry(pm) %></:col>
         <:col :let={pm} label={gettext("Status")}>
-          <.badge tone={pm_tone(pm[:status])}><%= pm[:status] %></.badge>
+          <% status = payment_method_status(pm[:status]) %>
+          <.badge tone={pm_tone(status)}><%= status %></.badge>
         </:col>
         <:col :let={pm} label={gettext("Default")}>
           <.badge :if={pm[:default_payment_method]} tone={:success}><%= gettext("Default") %></.badge>
         </:col>
-        <:action :let={pm}>
-          <button
-            :if={!pm[:default_payment_method]}
-            type="button"
-            phx-click="make_default"
-            phx-value-id={pm[:id]}
-            phx-target={@myself}
-            class="bx-action"
+         <:action :let={pm}>
+           <button
+             :if={!pm[:default_payment_method] && payment_method_status(pm[:status]) == "active"}
+             type="button"
+             phx-click="make_default"
+             phx-value-id={pm[:id]}
+             phx-target={@myself}
+             class="bx-action"
           >
             <%= gettext("Make default") %>
           </button>
         </:action>
         <:action :let={pm}>
+          <% status = payment_method_status(pm[:status]) %>
           <button
-            :if={pm[:status] != "deactivated"}
+           :if={status == "active"}
             type="button"
             phx-click="deactivate"
             phx-value-id={pm[:id]}
@@ -390,15 +392,15 @@ defmodule BeeleexWeb.PaymentMethodsLive.ListComponent do
             data-confirm={gettext("Deactivate this payment method?")}
             class="bx-action bx-action--danger"
           >
-            <%= gettext("Deactivate") %>
-          </button>
-          <button
-            :if={pm[:status] == "deactivated"}
-            type="button"
-            phx-click="reactivate"
-            phx-value-id={pm[:id]}
-            phx-target={@myself}
-            class="bx-action"
+             <%= gettext("Deactivate") %>
+           </button>
+           <button
+             :if={status == "inactive"}
+             type="button"
+             phx-click="reactivate"
+             phx-value-id={pm[:id]}
+             phx-target={@myself}
+             class="bx-action"
           >
             <%= gettext("Retry") %>
           </button>
@@ -457,8 +459,11 @@ defmodule BeeleexWeb.PaymentMethodsLive.ListComponent do
 
   # --- card display helpers -------------------------------------------------
 
+  defp payment_method_status("inactive"), do: "inactive"
+  defp payment_method_status(status), do: status
+
   defp pm_tone("active"), do: :success
-  defp pm_tone("deactivated"), do: :danger
+  defp pm_tone("inactive"), do: :danger
   defp pm_tone(_), do: :neutral
 
   defp card(pm), do: pm[:stripe_card] || %{}

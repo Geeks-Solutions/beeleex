@@ -52,8 +52,24 @@ defmodule BeeleexWeb.PaymentMethodsLiveTest do
   end
 
   test "making a method default reloads the list", %{conn: conn} do
+    Process.delete(:get_payment_methods_calls)
+
     stub(Beeleex.ApiMock, :get_payment_methods, fn _token, _opts ->
-      {:ok, %{payment_methods: [payment_method()], total: 1, count: 1}}
+      calls = (Process.get(:get_payment_methods_calls) || 0) + 1
+      Process.put(:get_payment_methods_calls, calls)
+
+      case calls do
+        1 ->
+          {:ok, %{payment_methods: [payment_method()], total: 1, count: 1}}
+
+        _ ->
+          {:ok,
+           %{
+             payment_methods: [payment_method(%{default_payment_method: true})],
+             total: 1,
+             count: 1
+           }}
+      end
     end)
 
     expect(Beeleex.ApiMock, :make_default_payment_method, fn _token, 1, "5" ->
@@ -65,10 +81,36 @@ defmodule BeeleexWeb.PaymentMethodsLiveTest do
     view
     |> element("button[phx-click=make_default][phx-value-id=5]")
     |> render_click()
+
+    assert render(view) =~ "Default"
   end
 
-  test "adding a payment method requests a setup intent and pushes the Stripe event",
-       %{conn: conn} do
+  test "default action accepts string payment method ids", %{conn: conn} do
+    stub(Beeleex.ApiMock, :get_payment_methods, fn _token, _opts ->
+      {:ok,
+       %{
+         payment_methods: [payment_method(%{id: "5", default_payment_method: false})],
+         total: 1,
+         count: 1
+       }}
+    end)
+
+    expect(Beeleex.ApiMock, :make_default_payment_method, fn _token, 1, "5" ->
+      {:ok, "stripe_card"}
+    end)
+
+    {:ok, view, _html} = live(conn, "/companies/1")
+
+    view
+    |> element("button[phx-click=make_default][phx-value-id=5]")
+    |> render_click()
+
+    assert render(view) =~ "Default"
+  end
+
+  test "adding a payment method requests a setup intent and pushes the Stripe event", %{
+    conn: conn
+  } do
     stub(Beeleex.ApiMock, :get_payment_methods, fn _token, _opts ->
       {:ok, %{payment_methods: [], total: 0, count: 0}}
     end)
@@ -203,16 +245,52 @@ defmodule BeeleexWeb.PaymentMethodsLiveTest do
   end
 
   test "deactivating a method calls the API", %{conn: conn} do
+    Process.delete(:get_payment_methods_calls)
+
     stub(Beeleex.ApiMock, :get_payment_methods, fn _token, _opts ->
-      {:ok, %{payment_methods: [payment_method()], total: 1, count: 1}}
+      calls = (Process.get(:get_payment_methods_calls) || 0) + 1
+      Process.put(:get_payment_methods_calls, calls)
+
+      case calls do
+        1 ->
+          {:ok, %{payment_methods: [payment_method()], total: 1, count: 1}}
+
+        _ ->
+          {:ok, %{payment_methods: [payment_method(%{status: "inactive"})], total: 1, count: 1}}
+      end
     end)
 
-    expect(Beeleex.ApiMock, :deactivate_payment_method, fn _token, "5" -> {:ok, "deactivated"} end)
+    expect(Beeleex.ApiMock, :deactivate_payment_method, fn _token, "5" -> {:ok, "inactive"} end)
 
     {:ok, view, _html} = live(conn, "/companies/1")
 
+    html = render(view)
+    assert html =~ "Deactivate"
+    refute html =~ "Retry"
+
     view
     |> element("button[phx-click=deactivate][phx-value-id=5]")
+    |> render_click()
+
+    refute render(view) =~ "Make default"
+    assert render(view) =~ "Retry"
+  end
+
+  test "inactive card shows retry action", %{conn: conn} do
+    stub(Beeleex.ApiMock, :get_payment_methods, fn _token, _opts ->
+      {:ok, %{payment_methods: [payment_method(%{status: "inactive"})], total: 1, count: 1}}
+    end)
+
+    expect(Beeleex.ApiMock, :reactivate_payment_method, fn _token, "5" -> {:ok, "active"} end)
+
+    {:ok, view, _html} = live(conn, "/companies/1")
+
+    assert render(view) =~ "Retry"
+    refute render(view) =~ "Make default"
+    refute render(view) =~ "Deactivate"
+
+    view
+    |> element("button[phx-click=reactivate][phx-value-id=5]")
     |> render_click()
   end
 end

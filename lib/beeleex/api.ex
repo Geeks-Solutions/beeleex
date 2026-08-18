@@ -829,11 +829,11 @@ defmodule Beeleex.Api do
     payment_method_status_mutation(
       token,
       """
-      mutation deactivatePaymentMethod($id:Int!) {
+      mutation deactivatePaymentMethod($id: Int!) {
         deactivatePaymentMethod(id:$id) { status }
       }
       """,
-      %{id: id},
+      %{id: to_int(id)},
       "deactivatePaymentMethod",
       "deactivate_payment_method"
     )
@@ -848,11 +848,11 @@ defmodule Beeleex.Api do
     payment_method_status_mutation(
       token,
       """
-      mutation retryPaymentMethod($id:Int!) {
+      mutation retryPaymentMethod($id: Int!) {
         retryPaymentMethod(id:$id) { status }
       }
       """,
-      %{id: id},
+      %{id: to_int(id)},
       "retryPaymentMethod",
       "reactivate_payment_method"
     )
@@ -869,13 +869,16 @@ defmodule Beeleex.Api do
            url(),
            %{
              query: """
-             mutation changeDefaultPaymentMethod($companyId:Int!, $paymentId:Int!) {
-               changeDefaultPaymentMethod(companyId:$companyId, paymentMethodId:$paymentId) {
+             mutation changeDefaultPaymentMethod($companyId:Int!, $paymentMethodId:Int!) {
+               changeDefaultPaymentMethod(
+                 companyId:$companyId,
+                 paymentMethodId:$paymentMethodId
+               ) {
                  type
                }
              }
              """,
-             variables: %{companyId: company_id, paymentId: payment_id}
+             variables: %{companyId: to_int(company_id), paymentMethodId: to_int(payment_id)}
            },
            ui_headers(token)
          ) do

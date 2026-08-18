@@ -115,7 +115,8 @@ defmodule BeeleexWeb.Dev.SampleApi do
   def delete_company(_token, _id), do: {:ok, "Company deleted"}
 
   @impl true
-  def get_unlinked_projects(_token, _project_ids), do: {:ok, ["proj-unlinked-1", "proj-unlinked-2"]}
+  def get_unlinked_projects(_token, _project_ids),
+    do: {:ok, ["proj-unlinked-1", "proj-unlinked-2"]}
 
   @impl true
   def link_projects(token, id, _project_ids), do: get_company(token, id)
@@ -163,7 +164,7 @@ defmodule BeeleexWeb.Dev.SampleApi do
        }}
 
   @impl true
-  def deactivate_payment_method(_token, _id), do: {:ok, "deactivated"}
+  def deactivate_payment_method(_token, _id), do: {:ok, "inactive"}
 
   @impl true
   def reactivate_payment_method(_token, _id), do: {:ok, "active"}
