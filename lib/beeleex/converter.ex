@@ -1,8 +1,7 @@
 defmodule Beeleex.Converter do
-@moduledoc """
-This module handles converting the data received by Beelee API and by the host project
-to a standard format
-"""
+  @moduledoc """
+  Converts signed Beelee webhook payload objects into Beeleex event structs.
+  """
 
   @spec convert_result(%{String.t() => any}) :: struct
   def convert_result(result) do
@@ -12,6 +11,7 @@ to a standard format
   defp convert_beelee_object(%{"type" => type_name} = value) do
     module = object_module(type_name)
     processed_result = ExGeeks.Helpers.atomize_keys(value)
+
     processed_result
     |> Map.merge(%{data: struct(module, processed_result.data.object)})
   end
@@ -27,5 +27,4 @@ to a standard format
   defp object_module("payment_method_expiry_0_left"), do: Beeleex.PaymentMethod
   defp object_module("payment_method_expiry_1_left"), do: Beeleex.PaymentMethod
   defp object_module("company_update"), do: Beeleex.Company
-
 end

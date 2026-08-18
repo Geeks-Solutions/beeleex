@@ -34,7 +34,7 @@ defmodule BeeleexWeb.Layouts do
   end
 
   @doc """
-  The inner ("app") layout wrapping every Beeleex LiveView. Renders flash
+  Inner ("app") layout wrapping every Beeleex LiveView. Renders flash
   messages and the page content.
   """
   def live(assigns) do

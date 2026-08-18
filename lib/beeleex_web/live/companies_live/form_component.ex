@@ -129,7 +129,6 @@ defmodule BeeleexWeb.CompaniesLive.FormComponent do
 
   defp get(map, key), do: Map.get(map, key) || Map.get(map, to_string(key))
 
-  # Build the camelCase Beelee `CompanyInput` payload.
   defp to_input(data) do
     %{
       name: data.name,

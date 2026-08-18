@@ -53,11 +53,16 @@ defmodule Beeleex.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:ex_geeks,
        git: "https://github.com/Geeks-Solutions/ex_geeks",
-       ref: "e0e52754f5cce87eb4775b619969514b8eb861e7"},
+       ref: "9dfc2b93b2be6ac577a6643b230cb354abed7b1d"},
       # {:ex_geeks, path: "/Users/julien/Documents/Repos/Gitlab/Geeks/Libraries/ex_geeks"},
       {:floki, ">= 0.30.0", only: :test},
       {:mox, "~> 1.1", only: :test},
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+
+      # Code Quality
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:ex_dna, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:ex_slop, "~> 0.4", only: [:dev, :test], runtime: false},
+      {:excoveralls, "~> 0.18", only: :test}
     ]
   end
 
@@ -69,7 +74,12 @@ defmodule Beeleex.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get"]
+      setup: ["deps.get"],
+      q: [
+        "format --check-formatted",
+        "compile --warnings-as-errors",
+        "credo --strict"
+      ]
     ]
   end
 end

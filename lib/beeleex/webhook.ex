@@ -62,8 +62,6 @@ defmodule Beeleex.Webhook do
         with {:ok, timestamp} <- check_timestamp(timestamp, tolerance),
              {:ok, _signatures} <- check_signatures(signatures, timestamp, payload, secret) do
           :ok
-        else
-          {:error, error} -> {:error, error}
         end
     end
   end

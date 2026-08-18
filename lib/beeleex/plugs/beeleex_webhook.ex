@@ -132,10 +132,13 @@ defmodule Beeleex.WebhookPlug do
     else
       {:handle_error, reason} ->
         send_resp(conn, 400, reason) |> halt()
+
       [] ->
         send_resp(conn, 400, "Secure your call with a valid signature and try again") |> halt()
+
       {:error, error} ->
         send_resp(conn, 400, error) |> halt()
+
       error ->
         send_resp(conn, 400, "error: #{error}") |> halt()
     end

@@ -20,13 +20,14 @@ defmodule Beeleex do
       Logger.configure(level: :info)
     end
   end
+
   def json_library do
     Application.get_env(:beeleex, :json_library, Jason)
     |> expand_value()
   end
 
   defp expand_value({module, function, args})
-      when is_atom(function) and is_list(args) do
+       when is_atom(function) and is_list(args) do
     apply(module, function, args)
   end
 
