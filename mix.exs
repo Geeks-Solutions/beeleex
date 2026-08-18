@@ -20,7 +20,7 @@ defmodule Beeleex.MixProject do
   def application do
     [
       mod: {Beeleex.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: extra_applications(Mix.env())
     ]
   end
 
@@ -28,6 +28,9 @@ defmodule Beeleex.MixProject do
   defp elixirc_paths(:dev), do: ["lib", "dev/support"]
   defp elixirc_paths(:test), do: ["lib", "dev/support", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
+
+  defp extra_applications(:test), do: [:logger, :runtime_tools, :phoenix_ecto]
+  defp extra_applications(_), do: [:logger, :runtime_tools]
 
   defp package do
     [
@@ -43,6 +46,7 @@ defmodule Beeleex.MixProject do
       {:phoenix, ">= 1.6.15"},
       {:phoenix_live_view, "~> 0.20 or ~> 1.0"},
       {:phoenix_html, "~> 4.0"},
+      {:phoenix_ecto, "~> 4.6", only: :test, optional: true},
       {:phoenix_view, "~> 2.0"},
       {:phoenix_live_reload, "~> 1.4", only: :dev},
       {:esbuild, "~> 0.8", runtime: false},

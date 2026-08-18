@@ -72,7 +72,15 @@ The pages run through the macro-provided `:beeleex_browser` pipeline
 
 ## Host requirements
 
-1. **LiveView socket** — your endpoint must serve it (standard for any LiveView
+1. **Form support** — the pages use schemaless `Ecto.Changeset` forms, so the
+   host app must depend on `phoenix_ecto`:
+
+   ```elixir
+   # mix.exs
+   {:phoenix_ecto, "~> 4.6"}
+   ```
+
+2. **LiveView socket** — your endpoint must serve it (standard for any LiveView
    app):
 
    ```elixir
@@ -80,17 +88,17 @@ The pages run through the macro-provided `:beeleex_browser` pipeline
      websocket: [connect_info: [session: @session_options]]
    ```
 
-2. **Configuration** — the same server-to-server credentials used by the rest of
+3. **Configuration** — the same server-to-server credentials used by the rest of
    `Beeleex.Api`:
 
    ```elixir
    config :beeleex,
      beelee_endpoint: "https://beelee.geeks.solutions/v0-1/api",
      business_unit_id: System.get_env("BEELEE_BU_ID"),
-     business_unit_secure_key: System.get_env("BEELEE_BU_SECURE_KEY")
+      business_unit_secure_key: System.get_env("BEELEE_BU_SECURE_KEY")
    ```
 
-3. **Styling** — include the shipped stylesheet and (optionally) theme it by
+4. **Styling** — include the shipped stylesheet and (optionally) theme it by
    overriding CSS variables. No Tailwind or build step required:
 
    ```html

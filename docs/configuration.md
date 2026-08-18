@@ -31,6 +31,15 @@ use Beeleex.Routes,
   live_pipe_through: [:require_admin]
 ```
 
+The bundled LiveView pages use schemaless `Ecto.Changeset` forms. Host apps
+that mount them must also include `phoenix_ecto` so Phoenix can render those
+changesets as forms:
+
+```elixir
+# mix.exs
+{:phoenix_ecto, "~> 4.6"}
+```
+
 See [integration/liveview-pages.md](integration/liveview-pages.md) for the full
 LiveView setup, including session token, stylesheet and payment method
 JavaScript hook wiring.
