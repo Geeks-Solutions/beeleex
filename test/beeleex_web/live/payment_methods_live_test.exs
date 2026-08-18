@@ -179,6 +179,7 @@ defmodule BeeleexWeb.PaymentMethodsLiveTest do
 
     assert final_html =~
              "The card could not be verified. Please make sure this card has enough funds and try again."
+
     refute final_html =~ "Card attached and is being verified with a 1 EUR authorization"
   end
 
