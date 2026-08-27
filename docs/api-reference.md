@@ -12,6 +12,24 @@ Units, companies, invoices and credit notes. Every call:
 
 ## Functions
 
+### `get_business_unit(id)`
+`integer() | String.t() :: {:ok, Beeleex.BusinessUnit.t()} | {:error, String.t()}`
+
+Loads a Business Unit through Beelee's `getBusinessUnit(id: Int!)` query. This
+is a server-to-server call and sends configured `secure-key` and `bu-id` headers.
+Host applications can use this response to build the complete input required by
+`edit_business_unit/2`.
+
+### `edit_business_unit(id, business_unit_input)`
+`(integer() | String.t(), map()) :: {:ok, Beeleex.BusinessUnit.t()} | {:error, String.t()}`
+
+Updates a Business Unit through Beelee's `editBusinessUnit` mutation. The input
+map must use GraphQL camelCase keys: `cycle`, `name`, `startCycleDate`,
+`tokenValidationUrl`, `verifyCardAttachment`, and `webhookUrl`. This is a
+server-to-server call and sends configured `secure-key` and `bu-id` headers.
+Because Beelee's `BusinessUnitInput` has required fields, callers must pass a
+complete input map.
+
 ### `update_invoices(invoices)`
 `list(Beeleex.InvoiceUpdate.t()) :: {:ok, String.t()} | {:error, String.t()}`
 
