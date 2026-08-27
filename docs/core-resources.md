@@ -21,6 +21,12 @@ A customer company. Fields: `id`, `user_id`, `name`, `email`, `country`,
 `phone_number`, `address`, `business_unit`.
 - `compute_bu_cycle/1` derives cycle data from `business_unit.job.scheduled_at`.
 
+## `Beeleex.BusinessUnit` — `core_resources/business_unit.ex`
+A Beelee Business Unit. Fields: `id`, `archived`, `billing_center`,
+`current_cycle`, `cycle`, `invoices_count`, `job`, `name`, `secure_key`,
+`start_cycle_date`, `token_validation_url`, `verify_card_attachment`,
+`dev_mode`, `webhook_url`. Produced by `Beeleex.Api.edit_business_unit/2`.
+
 ## `Beeleex.Invoice` — `core_resources/invoice/invoice.ex`
 A Beelee invoice. Fields: `id`, `amount_before_tax`, `tax_amount`, `tax_rate`,
 `amount_with_tax`, `reduction_amount_before_tax`, `reduction_tax_amount`,

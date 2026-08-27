@@ -16,7 +16,7 @@ defmodule BeeleexApiTest do
       receiver = Application.get_env(:beeleex, :beeleex_api_test_receiver)
       response_fun = Application.get_env(:beeleex, :beeleex_api_test_response_fun)
 
-      if receiver, do: send(receiver, {:beeleex_api_request, payload})
+      if receiver, do: send(receiver, {:beeleex_api_request, payload, conn.req_headers})
 
       response =
         if is_function(response_fun) do
@@ -93,10 +93,161 @@ defmodule BeeleexApiTest do
 
   defp assert_request do
     receive do
-      {:beeleex_api_request, payload} -> payload
+      {:beeleex_api_request, payload, _headers} -> payload
     after
       1_000 -> flunk("did not capture API request")
     end
+  end
+
+  defp assert_request_with_headers do
+    receive do
+      {:beeleex_api_request, payload, headers} -> {payload, headers}
+    after
+      1_000 -> flunk("did not capture API request")
+    end
+  end
+
+  defp with_authenticated_business_unit(fun) do
+    old_secure_key = Application.get_env(:beeleex, :business_unit_secure_key)
+    old_bu_id = Application.get_env(:beeleex, :business_unit_id)
+
+    Application.put_env(:beeleex, :business_unit_secure_key, "test-secure-key")
+    Application.put_env(:beeleex, :business_unit_id, 123)
+
+    try do
+      fun.()
+    after
+      if old_secure_key == nil do
+        Application.delete_env(:beeleex, :business_unit_secure_key)
+      else
+        Application.put_env(:beeleex, :business_unit_secure_key, old_secure_key)
+      end
+
+      if old_bu_id == nil do
+        Application.delete_env(:beeleex, :business_unit_id)
+      else
+        Application.put_env(:beeleex, :business_unit_id, old_bu_id)
+      end
+    end
+  end
+
+  defp business_unit_response do
+    %{
+      "archived" => false,
+      "billingCenter" => %{"id" => 4, "name" => "Billing", "vatNumber" => "BE123"},
+      "cycle" => "monthly",
+      "devMode" => true,
+      "id" => 42,
+      "invoicesCount" => 7,
+      "job" => %{"scheduledAt" => "2026-09-01T00:00:00Z"},
+      "name" => "Updated BU",
+      "secureKey" => "returned-secure-key",
+      "startCycleDate" => "2026-08-01",
+      "tokenValidationUrl" => "https://example.test/verify_token",
+      "verifyCardAttachment" => true,
+      "webhookUrl" => "https://example.test/webhooks/beelee"
+    }
+  end
+
+  test "get_business_unit sends secure headers and returns a BusinessUnit" do
+    with_authenticated_business_unit(fn ->
+      with_mocked_beelee_api(
+        fn _payload ->
+          %{"data" => %{"getBusinessUnit" => business_unit_response()}}
+        end,
+        fn ->
+          assert {:ok, business_unit} = Beeleex.Api.get_business_unit("42")
+          assert %Beeleex.BusinessUnit{} = business_unit
+          assert business_unit.id == 42
+          assert business_unit.name == "Updated BU"
+          assert business_unit.secure_key == "returned-secure-key"
+          assert business_unit.verify_card_attachment == true
+          assert business_unit.billing_center == %{id: 4, name: "Billing", vat_number: "BE123"}
+          assert business_unit.job == %{scheduled_at: "2026-09-01T00:00:00Z"}
+
+          {request, headers} = assert_request_with_headers()
+          headers = Map.new(headers)
+
+          assert request["query"] =~ "query getBusinessUnit"
+          assert request["query"] =~ "$id: Int!"
+          assert request["query"] =~ "getBusinessUnit(id: $id)"
+          assert request["variables"]["id"] == 42
+          assert headers["secure-key"] == "test-secure-key"
+          assert headers["bu-id"] == "123"
+        end
+      )
+    end)
+  end
+
+  test "get_business_unit returns GraphQL errors" do
+    with_authenticated_business_unit(fn ->
+      with_mocked_beelee_api(
+        fn _payload ->
+          %{"data" => %{"getBusinessUnit" => nil}, "errors" => [%{"message" => "not found"}]}
+        end,
+        fn ->
+          assert {:error, "not found"} = Beeleex.Api.get_business_unit(42)
+          _request = assert_request()
+        end
+      )
+    end)
+  end
+
+  test "edit_business_unit sends secure headers and returns a BusinessUnit" do
+    business_unit_input = %{
+      cycle: "monthly",
+      name: "Updated BU",
+      startCycleDate: "2026-08-01",
+      tokenValidationUrl: "https://example.test/verify_token",
+      verifyCardAttachment: true,
+      webhookUrl: "https://example.test/webhooks/beelee"
+    }
+
+    with_authenticated_business_unit(fn ->
+      with_mocked_beelee_api(
+        fn _payload ->
+          %{"data" => %{"editBusinessUnit" => business_unit_response()}}
+        end,
+        fn ->
+          assert {:ok, business_unit} = Beeleex.Api.edit_business_unit("42", business_unit_input)
+          assert %Beeleex.BusinessUnit{} = business_unit
+          assert business_unit.id == 42
+          assert business_unit.name == "Updated BU"
+          assert business_unit.secure_key == "returned-secure-key"
+          assert business_unit.verify_card_attachment == true
+          assert business_unit.billing_center == %{id: 4, name: "Billing", vat_number: "BE123"}
+          assert business_unit.job == %{scheduled_at: "2026-09-01T00:00:00Z"}
+
+          {request, headers} = assert_request_with_headers()
+          headers = Map.new(headers)
+
+          assert request["query"] =~ "mutation editBusinessUnit"
+          assert request["query"] =~ "$businessUnit: BusinessUnitInput!"
+          assert request["query"] =~ "editBusinessUnit(businessUnit: $businessUnit, id: $id)"
+
+          assert request["variables"]["businessUnit"] ==
+                   Poison.decode!(Poison.encode!(business_unit_input))
+
+          assert request["variables"]["id"] == 42
+          assert headers["secure-key"] == "test-secure-key"
+          assert headers["bu-id"] == "123"
+        end
+      )
+    end)
+  end
+
+  test "edit_business_unit returns GraphQL errors" do
+    with_authenticated_business_unit(fn ->
+      with_mocked_beelee_api(
+        fn _payload ->
+          %{"data" => %{"editBusinessUnit" => nil}, "errors" => [%{"message" => "forbidden"}]}
+        end,
+        fn ->
+          assert {:error, "forbidden"} = Beeleex.Api.edit_business_unit(42, %{})
+          _request = assert_request()
+        end
+      )
+    end)
   end
 
   test "make_default uses paymentMethodId variable" do
