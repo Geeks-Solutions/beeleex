@@ -4,6 +4,8 @@ defmodule BeeleexWeb.PaymentMethodsLiveTest do
   import Phoenix.LiveViewTest
   import Mox
 
+  alias BeeleexWeb.PaymentMethodsLive.ListComponent
+
   setup :set_mox_global
   setup :verify_on_exit!
 
@@ -190,6 +192,38 @@ defmodule BeeleexWeb.PaymentMethodsLiveTest do
     assert final_html =~ "Payment method added successfully"
     assert final_html =~ "visa"
     assert final_html =~ "4242"
+
+    Process.sleep(2_600)
+
+    assert Process.alive?(view.pid)
+    refute render(view) =~ "Payment method added successfully"
+  end
+
+  test "stale notice cleanup does not clear a newer notice" do
+    old_token = make_ref()
+    current_token = make_ref()
+
+    socket = %Phoenix.LiveView.Socket{
+      assigns: %{__changed__: %{}, notice: "new notice", notice_clear_token: current_token}
+    }
+
+    assert {:ok, stale_socket} =
+             ListComponent.update(
+               %{clear_notice: old_token},
+               socket
+             )
+
+    assert stale_socket.assigns.notice == "new notice"
+    assert stale_socket.assigns.notice_clear_token == current_token
+
+    assert {:ok, cleared_socket} =
+             ListComponent.update(
+               %{clear_notice: current_token},
+               stale_socket
+             )
+
+    assert cleared_socket.assigns.notice == nil
+    assert cleared_socket.assigns.notice_clear_token == nil
   end
 
   test "adding a payment method shows a verification error when card is not found", %{conn: conn} do
