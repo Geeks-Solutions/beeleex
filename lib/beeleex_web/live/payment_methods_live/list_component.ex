@@ -85,6 +85,14 @@ defmodule BeeleexWeb.PaymentMethodsLive.ListComponent do
     end
   end
 
+  def update(%{clear_notice: token}, socket) do
+    if socket.assigns.notice_clear_token == token do
+      {:ok, assign(socket, notice: nil, notice_clear_token: nil)}
+    else
+      {:ok, socket}
+    end
+  end
+
   def update(assigns, socket) do
     socket = assign(socket, assigns)
 
@@ -291,14 +299,6 @@ defmodule BeeleexWeb.PaymentMethodsLive.ListComponent do
     end
   end
 
-  def handle_info({:clear_notice, token}, socket) do
-    if socket.assigns.notice_clear_token == token do
-      {:noreply, assign(socket, notice: nil, notice_clear_token: nil)}
-    else
-      {:noreply, socket}
-    end
-  end
-
   defp clear_verification(socket) do
     assign(socket,
       notice: nil,
@@ -340,7 +340,12 @@ defmodule BeeleexWeb.PaymentMethodsLive.ListComponent do
 
   defp schedule_notice_clear(socket) do
     token = make_ref()
-    Process.send_after(self(), {:clear_notice, token}, @verification_flash_ttl_ms)
+
+    Phoenix.LiveView.send_update_after(
+      __MODULE__,
+      [id: socket.assigns.id, clear_notice: token],
+      @verification_flash_ttl_ms
+    )
 
     assign(socket, notice_clear_token: token)
   end

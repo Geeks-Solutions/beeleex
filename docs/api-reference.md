@@ -30,6 +30,13 @@ server-to-server call and sends configured `secure-key` and `bu-id` headers.
 Because Beelee's `BusinessUnitInput` has required fields, callers must pass a
 complete input map.
 
+### `run_next_scheduled_business_unit_cycle(id)`
+`integer() | String.t() :: {:ok, Beeleex.BusinessUnit.t()} | {:error, String.t()}`
+
+Runs Beelee's `runNextScheduledBusinessUnitCycle(id: Int!)` mutation for the
+given Business Unit. This is a server-to-server call and sends configured
+`secure-key` and `bu-id` headers.
+
 ### `update_invoices(invoices)`
 `list(Beeleex.InvoiceUpdate.t()) :: {:ok, String.t()} | {:error, String.t()}`
 
