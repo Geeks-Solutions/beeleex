@@ -250,6 +250,57 @@ defmodule BeeleexApiTest do
     end)
   end
 
+  test "run_next_scheduled_business_unit_cycle sends secure headers and returns a BusinessUnit" do
+    with_authenticated_business_unit(fn ->
+      with_mocked_beelee_api(
+        fn _payload ->
+          %{"data" => %{"runNextScheduledBusinessUnitCycle" => business_unit_response()}}
+        end,
+        fn ->
+          assert {:ok, business_unit} =
+                   Beeleex.Api.run_next_scheduled_business_unit_cycle("42")
+
+          assert %Beeleex.BusinessUnit{} = business_unit
+          assert business_unit.id == 42
+          assert business_unit.name == "Updated BU"
+          assert business_unit.secure_key == "returned-secure-key"
+          assert business_unit.verify_card_attachment == true
+          assert business_unit.billing_center == %{id: 4, name: "Billing", vat_number: "BE123"}
+          assert business_unit.job == %{scheduled_at: "2026-09-01T00:00:00Z"}
+
+          {request, headers} = assert_request_with_headers()
+          headers = Map.new(headers)
+
+          assert request["query"] =~ "mutation runNextScheduledBusinessUnitCycle"
+          assert request["query"] =~ "$id: Int!"
+          assert request["query"] =~ "runNextScheduledBusinessUnitCycle(id: $id)"
+          assert request["variables"]["id"] == 42
+          assert headers["secure-key"] == "test-secure-key"
+          assert headers["bu-id"] == "123"
+        end
+      )
+    end)
+  end
+
+  test "run_next_scheduled_business_unit_cycle returns GraphQL errors" do
+    with_authenticated_business_unit(fn ->
+      with_mocked_beelee_api(
+        fn _payload ->
+          %{
+            "data" => %{"runNextScheduledBusinessUnitCycle" => nil},
+            "errors" => [%{"message" => "cycle unavailable"}]
+          }
+        end,
+        fn ->
+          assert {:error, "cycle unavailable"} =
+                   Beeleex.Api.run_next_scheduled_business_unit_cycle(42)
+
+          _request = assert_request()
+        end
+      )
+    end)
+  end
+
   test "make_default uses paymentMethodId variable" do
     with_mocked_beelee_api(
       fn _payload ->
