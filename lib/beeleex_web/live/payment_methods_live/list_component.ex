@@ -146,10 +146,7 @@ defmodule BeeleexWeb.PaymentMethodsLive.ListComponent do
 
   # Schedule the next verification refresh attempt from a detached task. `send_update/3`
   # can target the LiveComponent from any process, so this needs no `handle_info` in
-  # the host page. Stops once `rest` is exhausted.
-  defp schedule_verification_reload(_lv_pid, _id, _stripe_payment_method_id, _before_count, []),
-    do: :ok
-
+  # the host page. The update handler stops when no retries remain.
   defp schedule_verification_reload(
          lv_pid,
          id,
