@@ -32,7 +32,8 @@ A Beelee invoice. Fields: `id`, `amount_before_tax`, `tax_amount`, `tax_rate`,
 `amount_with_tax`, `reduction_amount_before_tax`, `reduction_tax_amount`,
 `reduction_amount_with_tax`, `decimal_places`, `attempt`, `cycle`, `breakdown`
 (`list(InvoiceUpdate.pricing())`), `beginning`, `end`, `closing_date`, `type`,
-`company`, `status`, `inserted_at`.
+`tags`, `company`, `status`, `inserted_at`. `tags` is the original list of
+strings from Beelee (`[]` for an empty list, `nil` if absent or null).
 
 ## `Beeleex.InvoiceUpdate` — `core_resources/invoice/invoice_update.ex`
 Payload for updating freshly-generated invoices (camelCase keys). Fields:
@@ -59,8 +60,8 @@ by `Beeleex.Api.generate_onetime_invoice/1`.
 
 ## `Beeleex.CreditNote` — `core_resources/invoice/credit_note.ex`
 A credit note. Fields: `id`, `reason`, `status`, `amount`, `tags`,
-`remaining_amount`, `originating_invoice` (`Invoice.t()`). Produced by
-`Beeleex.Api.generate_credit_note/4`.
+`remaining_amount`, `originating_invoice` (a map of selected invoice fields,
+including tags when returned by Beelee). Produced by `Beeleex.Api.generate_credit_note/4`.
 
 ## `Beeleex.PaymentMethod` — `core_resources/payment_methods/payment_method.ex`
 A payment method. Fields: `type`, `company`, `default`, `object`,

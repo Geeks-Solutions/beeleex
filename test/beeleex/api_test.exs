@@ -301,6 +301,178 @@ defmodule BeeleexApiTest do
     end)
   end
 
+  defp invoice_tag_fixtures do
+    checkout_tags = ["checkout_operation:16a11704-d76f-4cce-8d61-c07865afe2ee", "Source:Portal"]
+    cycle_tags = ["project:acme", "billing:monthly"]
+    batched_tags = ["project:acme", "payment:batched"]
+
+    [
+      {%{"id" => 1, "type" => "one_time", "tags" => checkout_tags}, checkout_tags},
+      {%{"id" => 2, "type" => "cycle", "tags" => cycle_tags}, cycle_tags},
+      # Batch membership does not replace the invoice's underlying type.
+      {%{"id" => 3, "type" => "cycle", "paymentBatchId" => 4, "tags" => batched_tags},
+       batched_tags},
+      {%{"id" => 4, "type" => "cycle", "tags" => []}, []},
+      {%{"id" => 5, "type" => "one_time"}, nil},
+      {%{"id" => 6, "type" => "cycle", "tags" => nil}, nil}
+    ]
+  end
+
+  test "get_invoice selects and decodes original invoice tags" do
+    fixtures = invoice_tag_fixtures()
+    invoices = Map.new(fixtures, fn {invoice, _tags} -> {invoice["id"], invoice} end)
+
+    with_mocked_beelee_api(
+      fn %{"variables" => %{"id" => id}} ->
+        %{"data" => %{"getInvoice" => Map.fetch!(invoices, id)}}
+      end,
+      fn ->
+        for {%{"id" => id, "type" => type}, expected_tags} <- fixtures do
+          assert {:ok, %Beeleex.Invoice{id: ^id, type: ^type, tags: ^expected_tags}} =
+                   Beeleex.Api.get_invoice("token", to_string(id))
+
+          assert {request, headers} = assert_request_with_headers()
+          assert request["query"] =~ ~r/getInvoice\([^)]*\)\s*\{[^{}]*\btags\b/
+          assert request["variables"] == %{"id" => id}
+          assert {"bu-authorization", "Bearer token"} in headers
+        end
+      end
+    )
+  end
+
+  test "get_invoices selects and decodes tags for each invoice in the page" do
+    fixtures = invoice_tag_fixtures()
+    invoices = Enum.map(fixtures, &elem(&1, 0))
+
+    with_mocked_beelee_api(
+      fn _payload ->
+        %{"data" => %{"getInvoices" => %{"invoices" => invoices, "total" => 10, "count" => 6}}}
+      end,
+      fn ->
+        assert {:ok, %{invoices: decoded, total: 10, count: 6}} =
+                 Beeleex.Api.get_invoices("token")
+
+        assert Enum.map(decoded, fn %Beeleex.Invoice{id: id, type: type, tags: tags} ->
+                 {id, type, tags}
+               end) ==
+                 Enum.map(fixtures, fn {%{"id" => id, "type" => type}, tags} ->
+                   {id, type, tags}
+                 end)
+
+        assert assert_request()["query"] =~ ~r/\binvoices\s*\{[^{}]*\btags\b/
+      end
+    )
+  end
+
+  test "get_current_cycle_invoices retains all tags, not just the filter tag" do
+    tags = ["project:acme", "Source:Portal"]
+    invoice = %{"id" => 2, "type" => "cycle", "tags" => tags}
+
+    with_mocked_beelee_api(
+      fn _payload ->
+        %{"data" => %{"getInvoices" => %{"invoices" => [invoice], "count" => 1}}}
+      end,
+      fn ->
+        assert {:ok, [%Beeleex.Invoice{id: 2, tags: ^tags}]} =
+                 Beeleex.Api.get_current_cycle_invoices("1", "acme", "project:acme")
+
+        request = assert_request()
+        assert request["query"] =~ ~r/\binvoices\s*\{[^{}]*\btags\b/
+        assert %{"key" => "tag", "value" => "project:acme"} in request["variables"]["filter"]
+      end
+    )
+  end
+
+  test "generate_onetime_invoice sends input tags and returns Beelee's tags" do
+    input_tags = ["checkout_operation:16a11704-d76f-4cce-8d61-c07865afe2ee"]
+    returned_tags = input_tags ++ ["Source:Beelee"]
+
+    payment = %Beeleex.OnetimePayment{
+      companyId: 1,
+      decimalPlaces: 2,
+      pricing: [],
+      tags: input_tags
+    }
+
+    invoice = %{"id" => 1, "type" => "one_time", "tags" => returned_tags}
+
+    with_mocked_beelee_api(
+      fn _payload -> %{"data" => %{"generateOnetimeInvoice" => invoice}} end,
+      fn ->
+        assert {:ok, %Beeleex.Invoice{id: 1, tags: ^returned_tags}} =
+                 Beeleex.Api.generate_onetime_invoice(payment)
+
+        request = assert_request()
+        assert request["query"] =~ ~r/generateOnetimeInvoice\([^)]*\)\s*\{[^{}]*\btags\b/
+        assert request["variables"]["onetimeInvoice"]["tags"] == input_tags
+      end
+    )
+  end
+
+  test "update_invoices still sends tags in the invoice input" do
+    tags = ["billing:monthly", "Source:Portal"]
+    invoice = %Beeleex.InvoiceUpdate{cycle: %{id: 42}, tags: tags}
+
+    with_mocked_beelee_api(
+      fn _payload -> %{"data" => %{"updateCompanyInvoices" => %{"message" => "updated"}}} end,
+      fn ->
+        assert {:ok, "updated"} = Beeleex.Api.update_invoices([invoice])
+        assert [%{"tags" => ^tags}] = assert_request()["variables"]["companyInvoices"]
+      end
+    )
+  end
+
+  test "credit-note APIs select originating invoice tags separately from credit-note tags" do
+    invoice_tags = ["project:acme", "Source:Portal"]
+    note_tags = ["credit:adjustment"]
+    invoice = %{"id" => 2, "tags" => invoice_tags}
+    note = %{"id" => 1, "tags" => note_tags}
+
+    with_mocked_beelee_api(
+      fn %{"query" => query} ->
+        camel_note = Map.put(note, "originatingInvoice", invoice)
+        snake_note = Map.put(note, "originating_invoice", invoice)
+
+        data =
+          case query do
+            "mutation createCreditNote(" <> _ ->
+              %{"createCreditNote" => camel_note}
+
+            "query getCreditNotes(" <> _ ->
+              %{"getCreditNotes" => %{"data" => [snake_note]}}
+
+            "mutation requestCredit(" <> _ ->
+              %{"requestCreditForCycle" => %{"creditNotes" => [snake_note], "remainder" => 0}}
+          end
+
+        %{"data" => data}
+      end,
+      fn ->
+        assert {:ok, %Beeleex.CreditNote{tags: ^note_tags, originating_invoice: origin}} =
+                 Beeleex.Api.generate_credit_note(100, 2, "adjustment", note_tags)
+
+        assert origin == %{id: 2, tags: invoice_tags}
+        assert assert_request()["query"] =~ ~r/\boriginatingInvoice\s*\{[^{}]*\btags\b/
+
+        assert {:ok, [%Beeleex.CreditNote{tags: ^note_tags, originating_invoice: ^origin}]} =
+                 Beeleex.Api.get_credit_notes_for_invoices("1", [%Beeleex.Invoice{id: 2}])
+
+        assert assert_request()["query"] =~ ~r/\boriginating_invoice\s*\{[^{}]*\btags\b/
+
+        assert {:ok, [%Beeleex.CreditNote{tags: ^note_tags, originating_invoice: ^origin}], 0} =
+                 Beeleex.Api.request_credit_in_cycle(
+                   "1",
+                   100,
+                   "project:acme",
+                   "adjustment",
+                   note_tags
+                 )
+
+        assert assert_request()["query"] =~ ~r/\boriginating_invoice\s*\{[^{}]*\btags\b/
+      end
+    )
+  end
+
   test "make_default uses paymentMethodId variable" do
     with_mocked_beelee_api(
       fn _payload ->

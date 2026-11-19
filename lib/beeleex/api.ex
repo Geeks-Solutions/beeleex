@@ -237,10 +237,11 @@ defmodule Beeleex.Api do
   end
 
   @doc """
-  This function will create a new one time payment invoice on Beelee and immediately initiate a payment collection for this invoice
+  Create a one-time invoice and immediately initiate payment collection.
+  Returns the invoice, including its tags as returned by Beelee.
   """
   @spec generate_onetime_invoice(Beeleex.OnetimePayment.t()) ::
-          {:ok, String.t()} | {:error, String.t()}
+          {:ok, Invoice.t()} | {:error, String.t()}
   def generate_onetime_invoice(onetime_payment) do
     case ExGeeks.Helpers.endpoint_post_callback(
            url(),
@@ -255,6 +256,7 @@ defmodule Beeleex.Api do
                 amount_with_tax
                 status
                 type
+                tags
                 reduction_amount_before_tax
                 reduction_tax_amount
                 reduction_amount_with_tax
@@ -268,9 +270,7 @@ defmodule Beeleex.Api do
            headers()
          ) do
       %{"data" => %{"generateOnetimeInvoice" => invoice}} ->
-        invoice
-        |> ExGeeks.Helpers.atomize_keys(transformer: &Macro.underscore/1)
-        |> then(fn company -> {:ok, struct(Beeleex.Invoice, company)} end)
+        {:ok, parse_invoice(invoice)}
 
       %{"data" => _, "errors" => errors} ->
         error_response(__ENV__.function, errors)
@@ -278,7 +278,8 @@ defmodule Beeleex.Api do
   end
 
   @doc """
-  Loads up to 50 invoices for a company, the provided a project ID and a given tag in the current cycle
+  Load up to 50 invoices in the current cycle for a company, project ID, and
+  tag. Each invoice includes all of its returned tags, not just the filter tag.
   """
   @spec get_current_cycle_invoices(String.t(), String.t(), String.t()) ::
           {:ok, list(Beeleex.Invoice.t())} | {:error, String.t()}
@@ -330,12 +331,7 @@ defmodule Beeleex.Api do
         {:error, "no_match"}
 
       %{"data" => %{"getInvoices" => %{"invoices" => invoices}}} ->
-        invoices
-        |> Enum.map(fn invoice ->
-          invoice = ExGeeks.Helpers.atomize_keys(invoice, transformer: &Macro.underscore/1)
-          struct(Beeleex.Invoice, invoice)
-        end)
-        |> then(fn invoices -> {:ok, invoices} end)
+        {:ok, Enum.map(invoices, &parse_invoice/1)}
 
       %{"data" => _, "errors" => errors} ->
         error_response(__ENV__.function, errors)
@@ -367,6 +363,7 @@ defmodule Beeleex.Api do
                 originatingInvoice {
                   id
                   status
+                  tags
                 }
               }
              }
@@ -415,6 +412,7 @@ defmodule Beeleex.Api do
                 tags
                 originating_invoice {
                   id
+                  tags
                   company {
                     id
                     business_unit {
@@ -475,6 +473,7 @@ defmodule Beeleex.Api do
                     id
                     type
                     status
+                    tags
                     amount_with_tax
                     company {
                       id
@@ -740,9 +739,10 @@ defmodule Beeleex.Api do
   List invoices. `opts` accepts the same `:filter`, `:size` and `:skip` keys as
   `get_companies/1`. To scope invoices to a company, pass a `company_id` filter:
 
-      Beeleex.Api.get_invoices(filter: [%{key: "company_id", value: to_string(company_id)}])
+      Beeleex.Api.get_invoices(token, filter: [%{key: "company_id", value: to_string(company_id)}])
 
   Returns `{:ok, %{invoices: [%Beeleex.Invoice{}], total: integer, count: integer}}`.
+  Each invoice includes its original tags as returned by Beelee.
   """
   @spec get_invoices(String.t(), keyword) ::
           {:ok, %{invoices: list(Beeleex.Invoice.t()), total: integer, count: integer}}
@@ -782,7 +782,7 @@ defmodule Beeleex.Api do
   end
 
   @doc """
-  Fetch a single invoice by its Beelee id.
+  Fetch a single invoice by its Beelee id, including its original tags.
   """
   @spec get_invoice(String.t(), integer | String.t()) ::
           {:ok, Beeleex.Invoice.t()} | {:error, String.t()}
@@ -1115,6 +1115,7 @@ defmodule Beeleex.Api do
     """
     id
     type
+    tags
     status
     attempt
     cycle

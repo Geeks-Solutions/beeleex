@@ -1,14 +1,15 @@
 # API Reference — `Beeleex.Api`
 
 `Beeleex.Api` interfaces with the Beelee GraphQL server to manage Business
-Units, companies, invoices and credit notes. Every call:
+Units, companies, invoices and credit notes. API calls:
 
-- POSTs to `beelee_endpoint` (default `https://beelee.geeks.solutions/v0-1/api`)
+- POST to `beelee_endpoint` (default `https://beelee.geeks.solutions/v0-1/api`)
   via `ExGeeks.Helpers.endpoint_post_callback/3`.
-- Sends headers: `content-type`, `secure-key` (`business_unit_secure_key`),
-  `bu-id` (`business_unit_id`).
-- Atomizes/underscores response keys and returns `{:ok, result}` or, on GraphQL
-  errors, logs and returns `{:error, message}`.
+- Send `content-type` and `bu-id` (`business_unit_id`) headers. Server-to-server
+  calls send `secure-key` (`business_unit_secure_key`); token-authenticated
+  calls send `bu-authorization: Bearer <token>`.
+- Atomize/underscore response keys and return `{:ok, result}` or, on GraphQL
+  errors, log and return `{:error, message}`.
 
 ## Functions
 
@@ -51,16 +52,31 @@ Returns the company linked to one of your `customer_project` IDs. The returned
 company is enriched via `Beeleex.Company.compute_bu_cycle/1`.
 
 ### `generate_onetime_invoice(onetime_payment)`
-`Beeleex.OnetimePayment.t() :: {:ok, String.t()} | {:error, String.t()}`
+`Beeleex.OnetimePayment.t() :: {:ok, Beeleex.Invoice.t()} | {:error, String.t()}`
 
 Creates a one-time payment invoice on Beelee and immediately initiates payment
-collection. Returns a `Beeleex.Invoice`.
+collection. Returns the invoice with its tags as returned by Beelee.
+
+### `get_invoice(token, invoice_id)`
+`(String.t(), integer() | String.t()) :: {:ok, Beeleex.Invoice.t()} | {:error, String.t()}`
+
+Fetches a single invoice by Beelee ID using the caller's token. The invoice's
+`tags` field contains the original tag strings, such as
+`checkout_operation:<uuid>`. This applies to one-time, cycle-based, and batched
+invoices. An empty list stays `[]`; omitted or null tags are `nil`.
+
+### `get_invoices(token, opts \\ [])`
+`(String.t(), keyword()) :: {:ok, %{invoices: [Beeleex.Invoice.t()], total: integer(), count: integer()}} | {:error, String.t()}`
+
+Lists invoices using the caller's token. Accepts `:filter`, `:size`, and `:skip`.
+Each invoice includes tags with the same behavior as `get_invoice/2`.
 
 ### `get_current_cycle_invoices(company_id, project_id, tag)`
 `(String.t(), String.t(), String.t()) :: {:ok, list(Beeleex.Invoice.t())} | {:error, String.t()}`
 
 Loads up to 50 invoices for a company filtered by project ID and tag within the
-current cycle. Returns `{:error, "no_match"}` when count is 0.
+current cycle. The returned invoices retain all of their tags, not just the
+filter tag. Returns `{:error, "no_match"}` when count is 0.
 
 ### `generate_credit_note(amount, originating_invoice_id, reason, tags \\ [])`
 `(integer(), integer(), String.t(), list(String.t()) | nil) :: {:ok, Beeleex.CreditNote.t()} | {:error, String.t()}`
@@ -79,6 +95,9 @@ Fetches the credit notes associated with the provided invoices for a company.
 Requests a credit (up to `max_amount`) within the current cycle, scoped by
 `search_tag`, with a `reason` and optional `tags`. Useful when a project plan
 changes mid-cycle.
+
+The credit-note APIs include tags on the nested `originating_invoice` map
+when Beelee returns them. These are separate from the credit note's own tags.
 
 > For exact GraphQL fields and the freshest signatures, read the `@doc`/`@spec`
 > annotations in `lib/beeleex/api.ex`.
