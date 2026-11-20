@@ -1,6 +1,7 @@
 defmodule Beeleex.Invoice do
   @moduledoc """
-  Work with Beelee Invoice struct
+  A Beelee invoice. `tags` contains the original strings returned by Beelee.
+  An empty tag list stays empty; missing or null tags are represented by `nil`.
   """
 
   @type t :: %__MODULE__{
@@ -20,6 +21,7 @@ defmodule Beeleex.Invoice do
           end: String.t(),
           closing_date: String.t(),
           type: String.t(),
+          tags: [String.t()] | nil,
           company: Beeleex.Company.t(),
           status: String.t(),
           inserted_at: String.t()
@@ -42,6 +44,7 @@ defmodule Beeleex.Invoice do
     :end,
     :closing_date,
     :type,
+    :tags,
     :company,
     :status,
     :currency,
