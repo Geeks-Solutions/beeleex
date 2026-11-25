@@ -411,13 +411,66 @@ defmodule BeeleexApiTest do
 
   test "update_invoices still sends tags in the invoice input" do
     tags = ["billing:monthly", "Source:Portal"]
-    invoice = %Beeleex.InvoiceUpdate{cycle: %{id: 42}, tags: tags}
+
+    invoice = %Beeleex.InvoiceUpdate{
+      cycle: %{id: 42},
+      tags: tags,
+      currency: "GBP",
+      exchangeRate: "0.92",
+      taxPointDate: ~D[2026-11-25]
+    }
 
     with_mocked_beelee_api(
       fn _payload -> %{"data" => %{"updateCompanyInvoices" => %{"message" => "updated"}}} end,
       fn ->
         assert {:ok, "updated"} = Beeleex.Api.update_invoices([invoice])
-        assert [%{"tags" => ^tags}] = assert_request()["variables"]["companyInvoices"]
+        assert [%{"tags" => ^tags} = payload] = assert_request()["variables"]["companyInvoices"]
+        refute Map.has_key?(payload, "currency")
+        refute Map.has_key?(payload, "exchangeRate")
+        refute Map.has_key?(payload, "taxPointDate")
+      end
+    )
+  end
+
+  test "opt-in issuance preserves exact FX and every per-item outcome" do
+    invoice = %Beeleex.InvoiceUpdate{
+      companyId: 5,
+      cycle: %{id: 42},
+      currency: "GBP",
+      exchangeRate: "0.920000000000000001",
+      taxPointDate: ~D[2026-11-25],
+      pricing: [],
+      decimalPlaces: 2
+    }
+
+    results = [
+      %{"companyId" => 5, "outcome" => "ALREADY_ISSUED", "invoiceId" => 9, "errors" => []},
+      %{
+        "companyId" => 6,
+        "outcome" => "FAILED",
+        "invoiceId" => nil,
+        "errors" => [%{"code" => "INVALID_CURRENCY"}, %{"code" => "INVALID_PROJECTS"}]
+      }
+    ]
+
+    with_mocked_beelee_api(
+      fn _ -> %{"data" => %{"issueCompanyInvoices" => %{"results" => results}}} end,
+      fn ->
+        assert {:ok, ^results} =
+                 Beeleex.Api.issue_invoices([invoice, %{invoice | companyId: 6}])
+
+        request = assert_request()
+        assert request["query"] =~ "issueCompanyInvoices"
+
+        assert [
+                 %{
+                   "currency" => "GBP",
+                   "exchangeRate" => "0.920000000000000001",
+                   "taxPointDate" => "2026-11-25",
+                   "cycleId" => 42
+                 },
+                 %{"companyId" => 6}
+               ] = request["variables"]["companyInvoices"]
       end
     )
   end

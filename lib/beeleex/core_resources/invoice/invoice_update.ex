@@ -10,6 +10,8 @@ defmodule Beeleex.InvoiceUpdate do
           pricing: list(pricing()),
           created: String.t(),
           currency: String.t(),
+          exchangeRate: String.t() | nil,
+          taxPointDate: Date.t() | String.t() | nil,
           tags: list(String.t())
         }
 
@@ -48,6 +50,8 @@ defmodule Beeleex.InvoiceUpdate do
     :pricing,
     :created,
     :currency,
+    :exchangeRate,
+    :taxPointDate,
     :tags
   ]
 
@@ -55,8 +59,23 @@ defmodule Beeleex.InvoiceUpdate do
     invoice_update
     |> Map.from_struct()
     |> Map.put(:cycleId, invoice_update.cycle.id)
-    |> Map.drop([:cycle, :created, :currency])
+    |> Map.drop([:cycle, :created, :currency, :exchangeRate, :taxPointDate])
   end
+
+  @doc "Builds the opt-in issuance payload without converting the FX rate to a float."
+  def format_issuance_payload(%__MODULE__{} = input) do
+    input
+    |> format_payload()
+    |> Map.put(:currency, input.currency)
+    |> put_optional(:exchangeRate, input.exchangeRate)
+    |> put_optional(:taxPointDate, format_tax_point(input.taxPointDate))
+  end
+
+  defp put_optional(map, _key, nil), do: map
+  defp put_optional(map, key, value), do: Map.put(map, key, value)
+
+  defp format_tax_point(%Date{} = date), do: Date.to_iso8601(date)
+  defp format_tax_point(value), do: value
 
   @doc """
   format the following data into a valid pricing map

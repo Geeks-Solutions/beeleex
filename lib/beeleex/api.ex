@@ -177,6 +177,48 @@ defmodule Beeleex.Api do
   end
 
   @doc """
+  Issues cycle invoices independently through the opt-in API.
+
+  Returns every item, in request order, including any per-item errors. A
+  successful response may contain failed items. Replaying unchanged successful
+  pricing returns `ALREADY_ISSUED`; changed pricing returns a conflict. This
+  function does not retry automatically. Use a decimal string for exchangeRate
+  to preserve its exact value and supply currency on every item.
+  """
+  @spec issue_invoices([Beeleex.InvoiceUpdate.t()]) :: {:ok, [map()]} | {:error, term()}
+  def issue_invoices(invoices) when is_list(invoices) do
+    case ExGeeks.Helpers.endpoint_post_callback(
+           url(),
+           %{
+             query: """
+             mutation IssueCompanyInvoices($companyInvoices: [InvoiceInput!]!) {
+               issueCompanyInvoices(companyInvoices: $companyInvoices) {
+                 results { companyId cycleId invoiceId outcome errors { field code message } }
+               }
+             }
+             """,
+             variables: %{
+               companyInvoices:
+                 Enum.map(invoices, &Beeleex.InvoiceUpdate.format_issuance_payload/1)
+             }
+           },
+           headers()
+         ) do
+      %{"data" => %{"issueCompanyInvoices" => %{"results" => results}}} when is_list(results) ->
+        {:ok, results}
+
+      %{"errors" => errors} when is_list(errors) ->
+        {:error, errors}
+
+      {:error, _} = error ->
+        error
+
+      _ ->
+        {:error, :unexpected_issuance_response}
+    end
+  end
+
+  @doc """
   This function returns the company that is linked to your customer_project ID.
   It is helpful to update the company data related to a project in your Business Unit
   """

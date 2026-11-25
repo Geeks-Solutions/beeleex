@@ -51,6 +51,22 @@ mutation's confirmation message.
 Returns the company linked to one of your `customer_project` IDs. The returned
 company is enriched via `Beeleex.Company.compute_bu_cycle/1`.
 
+### `issue_invoices(invoices)` (opt-in)
+
+Use only with an API that supports `issueCompanyInvoices` and has enabled
+issuance. Supply `currency` on each `InvoiceUpdate`, an exact decimal string
+in `exchangeRate` for foreign currency (seller units per invoice unit), and
+an optional ISO `taxPointDate`. The function returns `{:ok, results}` with
+string-keyed rows and all errors, or `{:error, reason}` for a request-level
+failure. `{:ok, results}` does not mean every row issued.
+
+Items commit independently. On a lost response, replay the same items:
+previous successes return `ALREADY_ISSUED` without a new payment or reference;
+changed pricing for an issued item conflicts. Review failed items and retry
+according to the caller's policy. The library does not retry automatically.
+`update_invoices/1` retains its existing request, transaction and message
+contract. Existing hosts do not need to switch.
+
 ### `generate_onetime_invoice(onetime_payment)`
 `Beeleex.OnetimePayment.t() :: {:ok, Beeleex.Invoice.t()} | {:error, String.t()}`
 
