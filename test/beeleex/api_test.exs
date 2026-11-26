@@ -414,10 +414,7 @@ defmodule BeeleexApiTest do
 
     invoice = %Beeleex.InvoiceUpdate{
       cycle: %{id: 42},
-      tags: tags,
-      currency: "GBP",
-      exchangeRate: "0.92",
-      taxPointDate: ~D[2026-11-25]
+      tags: tags
     }
 
     with_mocked_beelee_api(
@@ -432,7 +429,7 @@ defmodule BeeleexApiTest do
     )
   end
 
-  test "opt-in issuance preserves exact FX and every per-item outcome" do
+  test "update_invoices sends exact FX and preserves the request-level error" do
     invoice = %Beeleex.InvoiceUpdate{
       companyId: 5,
       cycle: %{id: 42},
@@ -443,24 +440,21 @@ defmodule BeeleexApiTest do
       decimalPlaces: 2
     }
 
-    results = [
-      %{"companyId" => 5, "outcome" => "ALREADY_ISSUED", "invoiceId" => 9, "errors" => []},
-      %{
-        "companyId" => 6,
-        "outcome" => "FAILED",
-        "invoiceId" => nil,
-        "errors" => [%{"code" => "INVALID_CURRENCY"}, %{"code" => "INVALID_PROJECTS"}]
-      }
-    ]
+    message = "exchangeRate is required: provide EUR per 1 GBP."
 
     with_mocked_beelee_api(
-      fn _ -> %{"data" => %{"issueCompanyInvoices" => %{"results" => results}}} end,
+      fn _ ->
+        %{"data" => %{"updateCompanyInvoices" => nil}, "errors" => [%{"message" => message}]}
+      end,
       fn ->
-        assert {:ok, ^results} =
-                 Beeleex.Api.issue_invoices([invoice, %{invoice | companyId: 6}])
+        assert {:error, ^message} =
+                 Beeleex.Api.update_invoices([
+                   invoice,
+                   %{invoice | companyId: 6, exchangeRate: nil}
+                 ])
 
         request = assert_request()
-        assert request["query"] =~ "issueCompanyInvoices"
+        assert request["query"] =~ "updateCompanyInvoices"
 
         assert [
                  %{
@@ -469,8 +463,36 @@ defmodule BeeleexApiTest do
                    "taxPointDate" => "2026-11-25",
                    "cycleId" => 42
                  },
-                 %{"companyId" => 6}
+                 %{"companyId" => 6} = without_rate
                ] = request["variables"]["companyInvoices"]
+
+        refute Map.has_key?(without_rate, "exchangeRate")
+      end
+    )
+  end
+
+  test "one-time pricing passes optional accounting fields and returns FX errors" do
+    payment = %Beeleex.OnetimePayment{
+      companyId: 1,
+      currency: "GBP",
+      exchangeRate: "1.200000000000000001",
+      taxPointDate: ~D[2026-11-25]
+    }
+
+    message = "exchangeRate is required: provide EUR per 1 GBP."
+
+    with_mocked_beelee_api(
+      fn _ ->
+        %{"data" => %{"generateOnetimeInvoice" => nil}, "errors" => [%{"message" => message}]}
+      end,
+      fn ->
+        assert {:error, ^message} = Beeleex.Api.generate_onetime_invoice(payment)
+
+        assert %{
+                 "currency" => "GBP",
+                 "exchangeRate" => "1.200000000000000001",
+                 "taxPointDate" => "2026-11-25"
+               } = assert_request()["variables"]["onetimeInvoice"]
       end
     )
   end
