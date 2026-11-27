@@ -167,8 +167,15 @@ defmodule BeeleexWeb.InvoicesLiveTest do
     test "renders a single invoice", %{conn: conn} do
       stub(Beeleex.ApiMock, :get_invoice, fn _token, "42" -> {:ok, invoice()} end)
 
-      {:ok, _view, html} = live(conn, "/companies/1/invoices/42")
+      {:ok, view, html} = live(conn, "/companies/1/invoices/42")
 
+      assert has_element?(
+               view,
+               "article[aria-labelledby=invoice-title] #invoice-seller address",
+               "10 Original Street"
+             )
+
+      assert has_element?(view, "#invoice-totals .bx-invoice__balance", "0.00 USD")
       assert html =~ "Invoice BU-2026-11-42"
       refute html =~ "Invoice #42"
       assert html =~ "Internal ID"
@@ -186,7 +193,7 @@ defmodule BeeleexWeb.InvoicesLiveTest do
       assert html =~ "SELLER-REG"
       assert html =~ "BUYER-VAT"
       assert html =~ "BUYER-REG"
-      assert html =~ "10, Original Street, 75001, Paris, FR"
+      assert html =~ "75001 Paris"
       refute html =~ "Live renamed buyer"
       assert html =~ "1 USD = 0.920000000000000001 EUR"
       assert html =~ "9.20 EUR"
@@ -236,16 +243,20 @@ defmodule BeeleexWeb.InvoicesLiveTest do
       assert html =~ "Payment processing"
       rows = view |> element("#invoice-breakdown tbody") |> render() |> Floki.parse_fragment!()
       [package, usage] = Floki.find(rows, "tr")
-      package_cells = Enum.map(Floki.find(package, "td"), &Floki.text/1)
-      usage_cells = Enum.map(Floki.find(usage, "td"), &Floki.text/1)
-      assert Enum.at(package_cells, 1) =~ "Stored package description"
-      assert Enum.at(usage_cells, 1) =~ "Stored usage description"
 
-      assert Enum.map(Enum.slice(package_cells, 2, 6), &String.trim/1) ==
-               ["1", "1.000 KWD", "1.000 KWD", "20.00%", "0.200 KWD", "1.200 KWD"]
+      for {row, description, expected} <- [
+            {package, "Stored package description",
+             ["1", "1.000 KWD", "1.000 KWD", "0.200 KWD 20.00%", "1.200 KWD"]},
+            {usage, "Stored usage description",
+             ["3", "0.101 KWD", "0.303 KWD", "0.030 KWD 10.00%", "0.333 KWD"]}
+          ] do
+        [item | amounts] = Floki.find(row, "td")
+        assert Floki.text(item) =~ description
+        assert Floki.text(item) =~ "Acme project (acme)"
 
-      assert Enum.map(Enum.slice(usage_cells, 2, 6), &String.trim/1) ==
-               ["3", "0.101 KWD", "0.303 KWD", "10.00%", "0.030 KWD", "0.333 KWD"]
+        assert Enum.map(amounts, &(Floki.text(&1) |> String.split() |> Enum.join(" "))) ==
+                 expected
+      end
     end
 
     test "does not invent historical parties, currency, issuance or balance", %{conn: conn} do
@@ -278,20 +289,15 @@ defmodule BeeleexWeb.InvoicesLiveTest do
       refute has_element?(view, "#invoice-totals dd", ~r/^0\.00 currency unknown$/)
       refute html =~ "1 USD"
       refute html =~ " EUR"
+      assert has_element?(view, "#invoice-title", "Invoice BU-2026-11-42")
+      assert has_element?(view, ".bx-invoice__footer", "Internal ID")
       summary = view |> element(".bx-invoice-summary") |> render() |> Floki.parse_fragment!()
 
-      assert Floki.find(summary, "dt") |> Enum.map(&Floki.text/1) |> Enum.take(6) ==
-               [
-                 "Official reference",
-                 "Official number",
-                 "Internal ID",
-                 "Issued at (UTC)",
-                 "Tax point date",
-                 "Due date"
-               ]
+      assert Floki.find(summary, "dt") |> Enum.map(&Floki.text/1) |> Enum.take(3) ==
+               ["Issued at (UTC)", "Tax point date", "Due date"]
 
-      assert Floki.find(summary, "dd") |> Enum.map(&Floki.text/1) |> Enum.take(6) ==
-               ["BU-2026-11-42", "42", "42", "Not recorded", "Not recorded", "Not recorded"]
+      assert Floki.find(summary, "dd") |> Enum.map(&Floki.text/1) |> Enum.take(3) ==
+               ["Not recorded", "Not recorded", "Not recorded"]
     end
 
     test "renders complete unnumbered issuance without assuming a reference",

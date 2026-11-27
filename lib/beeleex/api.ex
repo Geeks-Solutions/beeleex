@@ -985,6 +985,10 @@ defmodule Beeleex.Api do
   defp parse_invoice(invoice) do
     invoice
     |> ExGeeks.Helpers.atomize_keys(transformer: &Macro.underscore/1)
+    |> Map.update(:company, nil, fn
+      nil -> nil
+      company -> struct(Beeleex.Company, company)
+    end)
     |> then(&struct(Beeleex.Invoice, &1))
   end
 

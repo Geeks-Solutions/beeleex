@@ -289,41 +289,175 @@
   margin: 0;
 }
 
-/* ---- Invoice totals (receipt-style summary) ---- */
-.bx-invoice-totals {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  max-width: 22rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px dashed var(--bx-border);
+/* ---- Invoice document ---- */
+.bx-invoice {
+  max-width: 68rem;
+  margin-inline: auto;
 }
-.bx-invoice-totals__row {
+.bx-invoice__document {
+  container-type: inline-size;
+  min-width: 0;
+  padding: clamp(1rem, 4vw, 2.5rem);
+  overflow-wrap: anywhere;
+}
+.bx-invoice__header {
   display: flex;
-  align-items: baseline;
+  flex-wrap: wrap;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 3px solid var(--bx-primary);
 }
-.bx-invoice-totals__row dt {
-  margin: 0;
+.bx-invoice__header .bx-title {
+  font-size: clamp(1.45rem, 4vw, 2rem);
+  line-height: 1.2;
+}
+.bx-invoice__status p,
+.bx-invoice__notice {
+  margin: 0.4rem 0 0;
   color: var(--bx-muted);
-  font-weight: 500;
+  font-size: 0.82rem;
 }
-.bx-invoice-totals__row dd {
+.bx-invoice__notice {
+  margin-top: 1rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--bx-surface-alt);
+}
+.bx-invoice__parties,
+.bx-invoice__settlement {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+}
+.bx-invoice__section-title {
+  margin: 0 0 0.6rem;
+  color: var(--bx-muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.bx-invoice__party-name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+}
+.bx-invoice__party address {
+  margin-bottom: 0.6rem;
+  font-style: normal;
+}
+.bx-invoice__facts {
+  margin: 0;
+  font-size: 0.9rem;
+}
+.bx-invoice__facts dt {
+  color: var(--bx-muted);
+  font-size: 0.78rem;
+}
+.bx-invoice__facts dd {
   margin: 0;
   font-variant-numeric: tabular-nums;
 }
-.bx-invoice-totals__row--total {
-  margin-top: 0.3rem;
-  padding-top: 0.6rem;
+.bx-invoice__party .bx-invoice__facts > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.45rem;
+}
+.bx-invoice-summary,
+.bx-invoice__reporting .bx-invoice__facts,
+.bx-invoice__footer .bx-invoice__facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem 1.2rem;
+}
+.bx-invoice-summary {
+  padding: 1rem 0;
+  border-block: 1px solid var(--bx-border);
+}
+.bx-invoice__lines {
+  margin-top: 1.5rem;
+}
+.bx-invoice__lines .bx-table-wrap {
+  border: 0;
+  border-radius: 0;
+}
+.bx-invoice__lines .bx-table :is(th, td) {
+  vertical-align: top;
+}
+.bx-invoice__lines .bx-table :is(th, td):first-child {
+  min-width: 10rem;
+}
+.bx-invoice__lines .bx-table :is(th, td):not(:first-child) {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.bx-invoice__lines small,
+.bx-invoice__totals small {
+  display: block;
+  color: var(--bx-muted);
+  font-size: 0.76rem;
+}
+.bx-invoice__totals .bx-invoice__facts > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  gap: 0.65rem;
+  align-items: baseline;
+  padding: 0.25rem 0;
+}
+.bx-invoice__totals dd {
+  text-align: right;
+}
+.bx-invoice__totals .bx-invoice__gross,
+.bx-invoice__totals .bx-invoice__balance {
+  margin-top: 0.35rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--bx-border);
+  font-weight: 650;
+}
+.bx-invoice__totals .bx-invoice__balance {
+  border-top: 2px solid var(--bx-text);
+  font-size: 1.15rem;
+}
+.bx-invoice__balance dt,
+.bx-invoice__gross dt {
+  color: var(--bx-text);
+  font-size: 0.85rem;
+}
+.bx-invoice__reporting {
+  padding: 1rem;
+  background: var(--bx-surface-alt);
+}
+.bx-invoice__reporting .bx-invoice__facts + .bx-invoice__facts {
+  margin-top: 0.8rem;
+}
+.bx-invoice__footer {
+  margin-top: 1.5rem;
+  padding-top: 0.85rem;
   border-top: 1px solid var(--bx-border);
 }
-.bx-invoice-totals__row--total dt,
-.bx-invoice-totals__row--total dd {
-  color: var(--bx-text);
-  font-size: 1.15rem;
-  font-weight: 700;
+@container (max-width: 34rem) {
+  .bx-invoice__settlement {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+  .bx-invoice__totals {
+    grid-row: 1;
+  }
+  .bx-invoice-summary,
+  .bx-invoice__reporting .bx-invoice__facts,
+  .bx-invoice__footer .bx-invoice__facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container (max-width: 21rem) {
+  .bx-invoice__parties,
+  .bx-invoice__reporting .bx-invoice__facts {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ---- Table ---- */

@@ -432,7 +432,7 @@ defmodule BeeleexApiTest do
         assert detail.seller_snapshot.address.street_name == "Original Street"
         assert detail.seller_snapshot.registration_number == "REG-7"
         assert detail.buyer_snapshot.name == "Original Buyer"
-        assert detail.company.name == "Live renamed company"
+        assert %Beeleex.Company{id: 1, name: "Live renamed company"} = detail.company
         assert detail.issued_at == "2026-11-27T10:20:30Z"
         assert detail.tax_point_date == "2026-11-26"
         assert detail.due_date == "2026-11-27"
@@ -483,7 +483,7 @@ defmodule BeeleexApiTest do
         "sellerCurrency" => nil,
         "exchangeRate" => nil,
         "outstandingAmount" => balance,
-        "company" => %{"name" => "Live Company"}
+        "company" => nil
       }
 
       with_mocked_beelee_api(
@@ -492,6 +492,7 @@ defmodule BeeleexApiTest do
           assert {:ok, invoice} = Beeleex.Api.get_invoice("token", 42)
           assert invoice.accounting_data_status == status
           assert invoice.outstanding_amount == balance
+          assert invoice.company == nil
 
           for field <-
                 ~w(invoice_number invoice_reference issued_at seller_snapshot buyer_snapshot currency seller_currency exchange_rate amount_with_tax decimal_places)a do
@@ -514,7 +515,7 @@ defmodule BeeleexApiTest do
       end,
       fn ->
         for {%{"id" => id, "type" => type}, expected_tags} <- fixtures do
-          assert {:ok, %Beeleex.Invoice{id: ^id, type: ^type, tags: ^expected_tags}} =
+          assert {:ok, %Beeleex.Invoice{id: ^id, type: ^type, tags: ^expected_tags, company: nil}} =
                    Beeleex.Api.get_invoice("token", to_string(id))
 
           assert {request, headers} = assert_request_with_headers()

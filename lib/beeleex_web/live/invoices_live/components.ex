@@ -30,26 +30,37 @@ defmodule BeeleexWeb.InvoicesLive.Components do
   def known(value) when value in [nil, ""], do: gettext("Not recorded")
   def known(value), do: to_string(value)
 
+  attr :label, :string, required: true
+  attr :value, :any, default: nil
+  attr :class, :string, default: nil
+  slot :inner_block
+
+  def fact(assigns) do
+    ~H"""
+    <div class={@class}>
+      <dt><%= @label %></dt>
+      <dd><%= if @inner_block == [], do: known(@value), else: render_slot(@inner_block) %></dd>
+    </div>
+    """
+  end
+
   attr :id, :string, required: true
   attr :title, :string, required: true
   attr :snapshot, :map, default: nil
 
   def party(assigns) do
     ~H"""
-    <section id={@id} class="bx-card">
-      <h2 class="bx-subtitle"><%= @title %></h2>
+    <section id={@id} class="bx-invoice__party">
+      <h2 class="bx-invoice__section-title"><%= @title %></h2>
       <%= if @snapshot do %>
-        <dl class="bx-dl">
-          <dt><%= gettext("Legal name") %></dt>
-          <dd><%= known(@snapshot[:name]) %></dd>
-          <dt><%= gettext("Source ID") %></dt>
-          <dd><%= known(@snapshot[:source_id]) %></dd>
-          <dt><%= gettext("VAT number") %></dt>
-          <dd><%= known(@snapshot[:vat_number]) %></dd>
-          <dt><%= gettext("Registration number") %></dt>
-          <dd><%= known(@snapshot[:registration_number]) %></dd>
-          <dt><%= gettext("Address") %></dt>
-          <dd><%= snapshot_address(@snapshot[:address]) %></dd>
+        <p class="bx-invoice__party-name"><%= known(@snapshot[:name]) %></p>
+        <address>
+          <div :for={line <- address_lines(@snapshot[:address])}><%= line %></div>
+        </address>
+        <dl class="bx-invoice__facts">
+          <.fact label={gettext("VAT number")} value={@snapshot[:vat_number]} />
+          <.fact label={gettext("Registration number")} value={@snapshot[:registration_number]} />
+          <.fact label={gettext("Source ID")} value={@snapshot[:source_id]} />
         </dl>
       <% else %>
         <p><%= gettext("Historical party snapshot not recorded.") %></p>
@@ -58,41 +69,41 @@ defmodule BeeleexWeb.InvoicesLive.Components do
     """
   end
 
-  defp snapshot_address(nil), do: known(nil)
+  defp address_lines(address) do
+    street =
+      Enum.join(
+        Enum.reject([address[:street_number], address[:street_name]], &(&1 in [nil, ""])),
+        " "
+      )
 
-  defp snapshot_address(address) do
-    [:street_number, :street_name, :postal_code, :city, :country]
-    |> Enum.map(&address[&1])
-    |> Enum.reject(&(&1 in [nil, ""]))
-    |> Enum.join(", ")
-    |> known()
+    city =
+      Enum.join(Enum.reject([address[:postal_code], address[:city]], &(&1 in [nil, ""])), " ")
+
+    case Enum.reject([street, city, address[:country]], &(&1 in [nil, ""])) do
+      [] -> [known(nil)]
+      lines -> lines
+    end
   end
 
   attr :invoice, Beeleex.Invoice, required: true
 
   def totals(assigns) do
     ~H"""
-    <section id="invoice-totals" class="bx-card">
-      <h2 class="bx-subtitle"><%= gettext("Invoice totals") %></h2>
-      <dl class="bx-dl">
-        <dt><%= gettext("Invoice currency / decimal places") %></dt>
-        <dd><%= known(@invoice.currency) %> / <%= known(@invoice.decimal_places) %></dd>
-        <dt><%= gettext("Original net") %></dt>
-        <dd><%= money(@invoice.amount_before_tax, @invoice) %></dd>
-        <dt><%= gettext("Original tax") %></dt>
-        <dd><%= money(@invoice.tax_amount, @invoice) %></dd>
-        <dt><%= gettext("Aggregate tax rate") %></dt>
-        <dd><%= if @invoice.accounting_data_status == "DRAFT", do: "—", else: tax_rate(@invoice.tax_rate) %></dd>
-        <dt><%= gettext("Original total") %></dt>
-        <dd><%= money(@invoice.amount_with_tax, @invoice) %></dd>
-        <dt><%= gettext("Credited net") %></dt>
-        <dd><%= money(@invoice.reduction_amount_before_tax, @invoice) %></dd>
-        <dt><%= gettext("Credited tax") %></dt>
-        <dd><%= money(@invoice.reduction_tax_amount, @invoice) %></dd>
-        <dt><%= gettext("Credited total") %></dt>
-        <dd><%= money(@invoice.reduction_amount_with_tax, @invoice) %></dd>
-        <dt><%= gettext("Outstanding balance") %></dt>
-        <dd><%= money(@invoice.outstanding_amount, @invoice) %></dd>
+    <section id="invoice-totals" class="bx-invoice__totals">
+      <h2 class="bx-invoice__section-title"><%= gettext("Invoice totals") %></h2>
+      <dl class="bx-invoice__facts">
+        <.fact label={gettext("Original net")} value={money(@invoice.amount_before_tax, @invoice)} />
+        <.fact label={gettext("Original tax")}>
+          <%= money(@invoice.tax_amount, @invoice) %>
+          <small :if={@invoice.tax_rate && @invoice.accounting_data_status != "DRAFT"}>
+            <%= gettext("Aggregate rate: %{rate}", rate: tax_rate(@invoice.tax_rate)) %>
+          </small>
+        </.fact>
+        <.fact label={gettext("Original total")} value={money(@invoice.amount_with_tax, @invoice)} class="bx-invoice__gross" />
+        <.fact label={gettext("Credited net")} value={money(@invoice.reduction_amount_before_tax, @invoice)} />
+        <.fact label={gettext("Credited tax")} value={money(@invoice.reduction_tax_amount, @invoice)} />
+        <.fact label={gettext("Credited total")} value={money(@invoice.reduction_amount_with_tax, @invoice)} />
+        <.fact label={gettext("Outstanding balance")} value={money(@invoice.outstanding_amount, @invoice)} class="bx-invoice__balance" />
       </dl>
     </section>
     """
@@ -102,25 +113,24 @@ defmodule BeeleexWeb.InvoicesLive.Components do
 
   def reporting(assigns) do
     ~H"""
-    <section id="invoice-reporting" class="bx-card">
-      <h2 class="bx-subtitle"><%= gettext("Seller / reporting currency") %></h2>
-      <dl class="bx-dl">
-        <dt><%= gettext("Reporting currency / decimal places") %></dt>
-        <dd><%= known(@invoice.seller_currency) %> / <%= known(@invoice.seller_decimal_places) %></dd>
-        <dt><%= gettext("Exchange rate (reporting units per invoice unit)") %></dt>
-        <dd>
+    <section id="invoice-reporting" class="bx-invoice__reporting">
+      <h2 class="bx-invoice__section-title"><%= gettext("Seller / reporting currency") %></h2>
+      <dl class="bx-invoice__facts">
+        <.fact label={gettext("Reporting currency / decimal places")}>
+          <%= known(@invoice.seller_currency) %> / <%= known(@invoice.seller_decimal_places) %>
+        </.fact>
+        <.fact label={gettext("Exchange rate (reporting units per invoice unit)")}>
           <%= if @invoice.exchange_rate && @invoice.currency && @invoice.seller_currency do %>
             1 <%= @invoice.currency %> = <%= @invoice.exchange_rate %> <%= @invoice.seller_currency %>
           <% else %>
             <%= gettext("Not recorded") %>
           <% end %>
-        </dd>
-        <dt><%= gettext("Original reporting net") %></dt>
-        <dd><%= reporting_money(@invoice.seller_amount_before_tax, @invoice) %></dd>
-        <dt><%= gettext("Original reporting tax") %></dt>
-        <dd><%= reporting_money(@invoice.seller_tax_amount, @invoice) %></dd>
-        <dt><%= gettext("Original reporting total") %></dt>
-        <dd><%= reporting_money(@invoice.seller_amount_with_tax, @invoice) %></dd>
+        </.fact>
+      </dl>
+      <dl class="bx-invoice__facts">
+        <.fact label={gettext("Original reporting net")} value={reporting_money(@invoice.seller_amount_before_tax, @invoice)} />
+        <.fact label={gettext("Original reporting tax")} value={reporting_money(@invoice.seller_tax_amount, @invoice)} />
+        <.fact label={gettext("Original reporting total")} value={reporting_money(@invoice.seller_amount_with_tax, @invoice)} />
       </dl>
     </section>
     """
@@ -144,23 +154,23 @@ defmodule BeeleexWeb.InvoicesLive.Components do
     assigns = assign(assigns, :lines, invoice_lines(assigns.invoice.breakdown || []))
 
     ~H"""
-    <section class="bx-section">
-      <h2 class="bx-subtitle"><%= gettext("Package and usage breakdown") %></h2>
+    <section class="bx-invoice__lines">
+      <h2 class="bx-invoice__section-title"><%= gettext("Items and services") %></h2>
       <.table id="invoice-breakdown" rows={@lines} empty_message={gettext("No line items recorded")}>
-        <:col :let={line} label={gettext("Project")}>
-          <%= known(line.project_name) %> (<%= known(line.project_id) %>)
-        </:col>
-        <:col :let={line} label={gettext("Item")}>
-          <%= line.kind %>: <%= known(line.name) %>
-          <p :if={line.description not in [nil, ""]}><%= line.description %></p>
+        <:col :let={line} label={gettext("Description")}>
+          <strong><%= line.kind %>: <%= known(line.name) %></strong>
+          <small :if={line.description not in [nil, ""]}><%= line.description %></small>
+          <small><%= known(line.project_name) %> (<%= known(line.project_id) %>)</small>
         </:col>
         <:col :let={line} label={gettext("Quantity")}><%= known(line.quantity) %></:col>
         <:col :let={line} label={gettext("Unit price (net)")}>
           <%= money(line.unit_price, @invoice) %>
         </:col>
         <:col :let={line} label={gettext("Net")}><%= money(line.net, @invoice) %></:col>
-        <:col :let={line} label={gettext("Tax rate")}><%= tax_rate(line.tax_rate) %></:col>
-        <:col :let={line} label={gettext("Tax")}><%= money(line.tax, @invoice) %></:col>
+        <:col :let={line} label={gettext("Tax")}>
+          <%= money(line.tax, @invoice) %>
+          <small><%= tax_rate(line.tax_rate) %></small>
+        </:col>
         <:col :let={line} label={gettext("Gross")}><%= money(line.gross, @invoice) %></:col>
       </.table>
     </section>

@@ -74,7 +74,7 @@ defmodule Beeleex.Invoice do
           closing_date: String.t() | nil,
           type: String.t() | nil,
           tags: [String.t()] | nil,
-          company: map() | nil,
+          company: Beeleex.Company.t() | nil,
           status: String.t() | nil,
           inserted_at: String.t() | nil
         }
