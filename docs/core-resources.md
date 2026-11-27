@@ -31,13 +31,39 @@ A Beelee Business Unit. Fields: `id`, `archived`, `billing_center`,
 A Beelee invoice. Fields: `id`, `amount_before_tax`, `tax_amount`, `tax_rate`,
 `amount_with_tax`, `reduction_amount_before_tax`, `reduction_tax_amount`,
 `reduction_amount_with_tax`, `decimal_places`, `attempt`, `cycle`, `breakdown`
-(`list(InvoiceUpdate.pricing())`), `beginning`, `end`, `closing_date`, `type`,
-`tags`, `company`, `status`, `inserted_at`. `tags` is the original list of
+(`[Invoice.package_line()]`), `beginning`, `end`, `closing_date`, `type`,
+`tags`, `company`, `status`, `inserted_at`. Accounting fields:
+
+- `invoice_number`, `invoice_reference`, `currency`, `issued_at`,
+  `tax_point_date`, `due_date`, `accounting_data_status`, `outstanding_amount`.
+- `seller_snapshot`, `buyer_snapshot`: immutable maps with `source_id`, `name`,
+  `address` (street number/name, postal code, city, country), `vat_number`,
+  `registration_number`. Never substitute the live `company` association.
+- `seller_currency`, `seller_decimal_places`, `exchange_rate`,
+  `seller_amount_before_tax`, `seller_tax_amount`, `seller_amount_with_tax`.
+
+Amounts use integer minor units or exact base-10 integer strings with the stored
+scale. FX is an exact decimal string (reporting units per invoice unit).
+Unknown fields are `nil`; original totals are distinct from credited amounts
+and the outstanding balance. The invoice number is a BigInteger string, not
+the database ID. A complete issued invoice can be unnumbered.
+
+`company` is a `Beeleex.Company` struct populated with the selected `id` and
+`name`, or `nil` when missing. It represents the current company, separate
+from the stored buyer snapshot.
+
+`breakdown` maps retain package/project names and description, package net unit
+price (quantity one), tax rate, tax and gross; nested `pay_as_you_go` maps retain
+name/description, quantity, net unit price, net/tax/gross and tax rate.
+Tax rates are basis points (2000 = 20%), independent of currency scale.
+
+`tags` is the original list of
 strings from Beelee (`[]` for an empty list, `nil` if absent or null).
 
 ## `Beeleex.InvoiceUpdate` — `core_resources/invoice/invoice_update.ex`
 Payload for updating freshly-generated invoices (camelCase keys). Fields:
-`cycle`, `companyId`, `decimalPlaces`, `pricing`, `created`, `currency`, `tags`.
+`cycle`, `companyId`, `decimalPlaces`, `pricing`, `created`, `currency`,
+`exchangeRate`, `taxPointDate`, `tags`.
 Nested types: `cycle`, `pricing` (package + `payAsYouGo`), `pay_as_you_go`.
 - `format_payload/1`, `format_pricing/…` shape the GraphQL input. Consumed by
   `Beeleex.Api.update_invoices/1`.
@@ -55,7 +81,8 @@ Invoice payment attempt data. Fields include `invoice_amount`, `decimal_places`,
 
 ## `Beeleex.OnetimePayment` — `core_resources/invoice/onetime_payment.ex`
 Input for a one-time invoice (camelCase keys). Fields: `companyId`,
-`decimalPlaces`, `pricing` (`list(InvoiceUpdate.pricing())`), `tags`. Consumed
+`decimalPlaces`, `currency`, `exchangeRate`, `taxPointDate`,
+`pricing` (`list(InvoiceUpdate.pricing())`), `tags`. Consumed
 by `Beeleex.Api.generate_onetime_invoice/1`.
 
 ## `Beeleex.CreditNote` — `core_resources/invoice/credit_note.ex`

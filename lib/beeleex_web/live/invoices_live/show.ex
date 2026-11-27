@@ -3,6 +3,7 @@ defmodule BeeleexWeb.InvoicesLive.Show do
   Read-only view of a single invoice.
   """
   use BeeleexWeb, :live_view
+  import BeeleexWeb.InvoicesLive.Components
 
   @impl true
   def mount(_params, session, socket) do
@@ -25,7 +26,7 @@ defmodule BeeleexWeb.InvoicesLive.Show do
       {:ok, invoice} ->
         {:noreply,
          socket
-         |> assign(:page_title, gettext("Invoice #%{id}", id: invoice.id))
+         |> assign(:page_title, invoice_title(invoice))
          |> assign(:company_path, company_path)
          |> assign(:invoice, invoice)}
 
@@ -40,56 +41,67 @@ defmodule BeeleexWeb.InvoicesLive.Show do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="bx-page">
+    <div class="bx-page bx-invoice">
       <.link navigate={@company_path} class="bx-back"><%= gettext("← Back to company") %></.link>
 
-      <div class="bx-header">
-        <h1 class="bx-title">
-          <%= gettext("Invoice #%{id}", id: @invoice.id) %>
-        </h1>
-        <.badge tone={invoice_status_tone(@invoice.status)}><%= @invoice.status %></.badge>
-      </div>
+      <article class="bx-card bx-invoice__document" aria-labelledby="invoice-title">
+        <header class="bx-invoice__header">
+          <h1 id="invoice-title" class="bx-title"><%= invoice_title(@invoice) %></h1>
+          <div class="bx-invoice__status">
+            <.badge tone={invoice_status_tone(@invoice.status)}>
+              <%= payment_status(@invoice.status) %>
+            </.badge>
+            <p><%= accounting_status(@invoice.accounting_data_status) %></p>
+          </div>
+        </header>
 
-      <section class="bx-card bx-invoice-summary">
-        <dl class="bx-dl">
-          <dt><%= gettext("Type") %></dt>
-          <dd><%= @invoice.type %></dd>
-          <%= if @invoice.cycle not in [nil, ""] do %>
-            <dt><%= gettext("Cycle") %></dt>
-            <dd><%= @invoice.cycle %></dd>
-          <% end %>
-          <%= if @invoice.beginning not in [nil, ""] or @invoice.end not in [nil, ""] do %>
-            <dt><%= gettext("Period") %></dt>
-            <dd><%= @invoice.beginning %> → <%= @invoice.end %></dd>
-          <% end %>
+        <p :if={@invoice.accounting_data_status == "DRAFT"} class="bx-invoice__notice">
+          <%= gettext("This invoice has not been issued. Totals are unavailable until pricing.") %>
+        </p>
+        <p :if={@invoice.accounting_data_status not in ["DRAFT", "COMPLETE"]} class="bx-invoice__notice">
+          <%= gettext("Some historical accounting details may be missing. Missing amounts are shown as a dash.") %>
+        </p>
+
+        <div class="bx-invoice__parties">
+          <.party id="invoice-seller" title={gettext("From · Seller")} snapshot={@invoice.seller_snapshot} />
+          <.party id="invoice-buyer" title={gettext("Bill to · Buyer")} snapshot={@invoice.buyer_snapshot} />
+        </div>
+
+        <dl class="bx-invoice__facts bx-invoice-summary">
+          <.fact label={gettext("Issued at (UTC)")} value={@invoice.issued_at} />
+          <.fact label={gettext("Tax point date")} value={@invoice.tax_point_date} />
+          <.fact label={gettext("Due date")} value={@invoice.due_date} />
+          <.fact :if={@invoice.beginning || @invoice.end} label={gettext("Billing period")}>
+            <%= known(@invoice.beginning) %> → <%= known(@invoice.end) %>
+          </.fact>
+          <.fact label={gettext("Type / cycle")}>
+            <%= known(@invoice.type) %>
+            <%= if @invoice.cycle, do: " / #{@invoice.cycle}" %>
+          </.fact>
+          <.fact label={gettext("Invoice currency / decimal places")}>
+            <%= known(@invoice.currency) %> / <%= known(@invoice.decimal_places) %>
+          </.fact>
         </dl>
 
-        <dl class="bx-invoice-totals">
-          <div class="bx-invoice-totals__row">
-            <dt><%= gettext("Amount before tax") %></dt>
-            <dd><%= format_amount(@invoice.amount_before_tax, @invoice.decimal_places) %></dd>
-          </div>
-          <div class="bx-invoice-totals__row">
-            <dt><%= gettext("Tax") %></dt>
-            <dd><%= format_amount(@invoice.tax_amount, @invoice.decimal_places) %></dd>
-          </div>
-          <div class="bx-invoice-totals__row bx-invoice-totals__row--total">
-            <dt><%= gettext("Amount with tax") %></dt>
-            <dd><%= format_amount(@invoice.amount_with_tax, @invoice.decimal_places) %></dd>
-          </div>
-        </dl>
-      </section>
+        <.lines invoice={@invoice} />
 
-      <section :if={@invoice.breakdown not in [nil, []]} class="bx-section">
-        <h2 class="bx-subtitle"><%= gettext("Breakdown") %></h2>
-        <.table id="invoice-breakdown" rows={@invoice.breakdown || []}>
-          <:col :let={line} label={gettext("Project")}><%= line[:project_name] %></:col>
-          <:col :let={line} label={gettext("Package")}><%= line[:package_name] %></:col>
-          <:col :let={line} label={gettext("Price before tax")}>
-            <%= format_amount(line[:package_price_before_tax], @invoice.decimal_places) %>
-          </:col>
-        </.table>
-      </section>
+        <div class="bx-invoice__settlement">
+          <dl class="bx-invoice__facts">
+            <.fact label={gettext("Settled at")} value={@invoice.closing_date} />
+          </dl>
+          <.totals invoice={@invoice} />
+        </div>
+
+        <.reporting invoice={@invoice} />
+
+        <footer class="bx-invoice__footer">
+          <dl class="bx-invoice__facts">
+            <.fact label={gettext("Official number")} value={@invoice.invoice_number} />
+            <.fact label={gettext("Internal ID")} value={@invoice.id} />
+            <.fact label={gettext("Record created at")} value={@invoice.inserted_at} />
+          </dl>
+        </footer>
+      </article>
     </div>
     """
   end

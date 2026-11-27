@@ -318,6 +318,193 @@ defmodule BeeleexApiTest do
     ]
   end
 
+  defp accounting_invoice do
+    %{
+      "id" => 42,
+      "invoiceNumber" => "9223372036854775807",
+      "invoiceReference" => "BU-2026-11-42",
+      "currency" => "USD",
+      "decimalPlaces" => 2,
+      "amountBeforeTax" => 9_223_372_036_854_775_000,
+      "taxAmount" => 807,
+      "taxRate" => 2000,
+      "amountWithTax" => 9_223_372_036_854_775_807,
+      "reductionAmountBeforeTax" => 1000,
+      "reductionTaxAmount" => 200,
+      "reductionAmountWithTax" => 1200,
+      "outstandingAmount" => "9223372036854774607",
+      "issuedAt" => "2026-11-27T10:20:30Z",
+      "taxPointDate" => "2026-11-26",
+      "dueDate" => "2026-11-27",
+      "closingDate" => nil,
+      "accountingDataStatus" => "COMPLETE",
+      "sellerCurrency" => "EUR",
+      "sellerDecimalPlaces" => 3,
+      "exchangeRate" => "0.092000000000000001",
+      "sellerAmountBeforeTax" => "8485502273906393000",
+      "sellerTaxAmount" => "742",
+      "sellerAmountWithTax" => "8485502273906393742",
+      "sellerSnapshot" => %{
+        "sourceId" => 7,
+        "name" => "Original Seller",
+        "vatNumber" => "VAT-7",
+        "registrationNumber" => "REG-7",
+        "address" => %{
+          "streetNumber" => "10",
+          "streetName" => "Original Street",
+          "postalCode" => "75001",
+          "city" => "Paris",
+          "country" => "FR"
+        }
+      },
+      "buyerSnapshot" => %{"sourceId" => 1, "name" => "Original Buyer", "address" => nil},
+      "company" => %{"id" => 1, "name" => "Live renamed company"},
+      "breakdown" => [
+        %{
+          "projectId" => "project-1",
+          "projectName" => "Project One",
+          "packageName" => "Package One",
+          "packageDescription" => "Stored package",
+          "packagePriceBeforeTax" => 1000,
+          "packageTax" => 200,
+          "packageTaxRate" => 2000,
+          "packagePriceWithTax" => 1200,
+          "payAsYouGo" => [
+            %{
+              "name" => "Requests",
+              "description" => "Stored usage",
+              "quantity" => 3,
+              "unitPriceBeforeTax" => 100,
+              "totalBeforeTax" => 300,
+              "tax" => 30,
+              "taxRate" => 1000,
+              "totalWithTax" => 330
+            }
+          ]
+        }
+      ]
+    }
+  end
+
+  test "all invoice entry points request and retain exact accounting and nested line facts" do
+    raw = accounting_invoice()
+
+    with_mocked_beelee_api(
+      fn _payload ->
+        %{
+          "data" => %{
+            "getInvoice" => raw,
+            "getInvoices" => %{"invoices" => [raw], "total" => 1, "count" => 1},
+            "generateOnetimeInvoice" => raw
+          }
+        }
+      end,
+      fn ->
+        assert {:ok, detail} = Beeleex.Api.get_invoice("token", "42")
+        assert_accounting_request(raw, assert_request()["query"])
+        assert {:ok, %{invoices: [^detail]}} = Beeleex.Api.get_invoices("token")
+        assert_accounting_request(raw, assert_request()["query"])
+
+        assert {:ok, [^detail]} =
+                 Beeleex.Api.get_current_cycle_invoices("1", "project-1", "cycle")
+
+        cycle_request = assert_request()
+        assert_accounting_request(raw, cycle_request["query"])
+        assert cycle_request["variables"]["currentCycle"] == true
+        assert cycle_request["query"] =~ "currentCycle: $currentCycle"
+
+        assert {:ok, ^detail} =
+                 Beeleex.Api.generate_onetime_invoice(%Beeleex.OnetimePayment{
+                   companyId: 1,
+                   pricing: []
+                 })
+
+        assert_accounting_request(raw, assert_request()["query"])
+        assert detail.invoice_number == "9223372036854775807"
+        assert detail.invoice_reference == "BU-2026-11-42"
+        assert detail.amount_with_tax == 9_223_372_036_854_775_807
+        assert detail.outstanding_amount == "9223372036854774607"
+        assert detail.exchange_rate == "0.092000000000000001"
+        assert detail.seller_amount_with_tax == "8485502273906393742"
+        assert detail.seller_decimal_places == 3
+        assert detail.currency == "USD"
+        assert detail.seller_currency == "EUR"
+        assert detail.seller_snapshot.address.street_name == "Original Street"
+        assert detail.seller_snapshot.registration_number == "REG-7"
+        assert detail.buyer_snapshot.name == "Original Buyer"
+        assert %Beeleex.Company{id: 1, name: "Live renamed company"} = detail.company
+        assert detail.issued_at == "2026-11-27T10:20:30Z"
+        assert detail.tax_point_date == "2026-11-26"
+        assert detail.due_date == "2026-11-27"
+        assert detail.closing_date == nil
+        assert detail.reduction_amount_with_tax == 1200
+        assert detail.accounting_data_status == "COMPLETE"
+        [package] = detail.breakdown
+        assert package.package_description == "Stored package"
+        assert package.package_tax_rate == 2000
+        assert package.package_price_with_tax == 1200
+        assert [usage] = package.pay_as_you_go
+        assert usage.quantity == 3
+        assert usage.unit_price_before_tax == 100
+        assert usage.total_before_tax == 300
+        assert usage.tax_rate == 1000
+        assert usage.tax == 30
+        assert usage.total_with_tax == 330
+      end
+    )
+  end
+
+  # The HTTP fixture cannot validate GraphQL, so require every fixture field to
+  # appear in the request too, including nested snapshots and line-item fields.
+  defp assert_accounting_request(value, query) when is_map(value) do
+    for {field, nested} <- value do
+      assert query =~ ~r/\b#{field}\b/
+      assert_accounting_request(nested, query)
+    end
+  end
+
+  defp assert_accounting_request(values, query) when is_list(values),
+    do: Enum.each(values, &assert_accounting_request(&1, query))
+
+  defp assert_accounting_request(_value, _query), do: :ok
+
+  test "decodes draft, unnumbered, paid and partial historical nulls without inferred facts" do
+    for status <- ["DRAFT", "COMPLETE", "LEGACY_PARTIAL"],
+        balance <- [nil, "0"] do
+      raw = %{
+        "id" => 42,
+        "accountingDataStatus" => status,
+        "invoiceNumber" => nil,
+        "invoiceReference" => nil,
+        "issuedAt" => nil,
+        "sellerSnapshot" => nil,
+        "buyerSnapshot" => nil,
+        "currency" => nil,
+        "sellerCurrency" => nil,
+        "exchangeRate" => nil,
+        "outstandingAmount" => balance,
+        "company" => nil
+      }
+
+      with_mocked_beelee_api(
+        fn _payload -> %{"data" => %{"getInvoice" => raw}} end,
+        fn ->
+          assert {:ok, invoice} = Beeleex.Api.get_invoice("token", 42)
+          assert invoice.accounting_data_status == status
+          assert invoice.outstanding_amount == balance
+          assert invoice.company == nil
+
+          for field <-
+                ~w(invoice_number invoice_reference issued_at seller_snapshot buyer_snapshot currency seller_currency exchange_rate amount_with_tax decimal_places)a do
+            assert Map.fetch!(invoice, field) == nil
+          end
+
+          assert_request()
+        end
+      )
+    end
+  end
+
   test "get_invoice selects and decodes original invoice tags" do
     fixtures = invoice_tag_fixtures()
     invoices = Map.new(fixtures, fn {invoice, _tags} -> {invoice["id"], invoice} end)
@@ -328,7 +515,7 @@ defmodule BeeleexApiTest do
       end,
       fn ->
         for {%{"id" => id, "type" => type}, expected_tags} <- fixtures do
-          assert {:ok, %Beeleex.Invoice{id: ^id, type: ^type, tags: ^expected_tags}} =
+          assert {:ok, %Beeleex.Invoice{id: ^id, type: ^type, tags: ^expected_tags, company: nil}} =
                    Beeleex.Api.get_invoice("token", to_string(id))
 
           assert {request, headers} = assert_request_with_headers()
@@ -411,13 +598,88 @@ defmodule BeeleexApiTest do
 
   test "update_invoices still sends tags in the invoice input" do
     tags = ["billing:monthly", "Source:Portal"]
-    invoice = %Beeleex.InvoiceUpdate{cycle: %{id: 42}, tags: tags}
+
+    invoice = %Beeleex.InvoiceUpdate{
+      cycle: %{id: 42},
+      tags: tags
+    }
 
     with_mocked_beelee_api(
       fn _payload -> %{"data" => %{"updateCompanyInvoices" => %{"message" => "updated"}}} end,
       fn ->
         assert {:ok, "updated"} = Beeleex.Api.update_invoices([invoice])
-        assert [%{"tags" => ^tags}] = assert_request()["variables"]["companyInvoices"]
+        assert [%{"tags" => ^tags} = payload] = assert_request()["variables"]["companyInvoices"]
+        refute Map.has_key?(payload, "currency")
+        refute Map.has_key?(payload, "exchangeRate")
+        refute Map.has_key?(payload, "taxPointDate")
+      end
+    )
+  end
+
+  test "update_invoices sends exact FX and preserves the request-level error" do
+    invoice = %Beeleex.InvoiceUpdate{
+      companyId: 5,
+      cycle: %{id: 42},
+      currency: "GBP",
+      exchangeRate: "0.920000000000000001",
+      taxPointDate: ~D[2026-11-25],
+      pricing: [],
+      decimalPlaces: 2
+    }
+
+    message = "exchangeRate is required: provide EUR per 1 GBP."
+
+    with_mocked_beelee_api(
+      fn _ ->
+        %{"data" => %{"updateCompanyInvoices" => nil}, "errors" => [%{"message" => message}]}
+      end,
+      fn ->
+        assert {:error, ^message} =
+                 Beeleex.Api.update_invoices([
+                   invoice,
+                   %{invoice | companyId: 6, exchangeRate: nil}
+                 ])
+
+        request = assert_request()
+        assert request["query"] =~ "updateCompanyInvoices"
+
+        assert [
+                 %{
+                   "currency" => "GBP",
+                   "exchangeRate" => "0.920000000000000001",
+                   "taxPointDate" => "2026-11-25",
+                   "cycleId" => 42
+                 },
+                 %{"companyId" => 6} = without_rate
+               ] = request["variables"]["companyInvoices"]
+
+        refute Map.has_key?(without_rate, "exchangeRate")
+      end
+    )
+  end
+
+  test "one-time pricing passes optional accounting fields and returns FX errors" do
+    payment = %Beeleex.OnetimePayment{
+      companyId: 1,
+      currency: "GBP",
+      exchangeRate: "1.200000000000000001",
+      taxPointDate: ~D[2026-11-25]
+    }
+
+    message = "exchangeRate is required: provide EUR per 1 GBP."
+
+    with_mocked_beelee_api(
+      fn _ ->
+        %{"data" => %{"generateOnetimeInvoice" => nil}, "errors" => [%{"message" => message}]}
+      end,
+      fn ->
+        assert {:error, ^message} = Beeleex.Api.generate_onetime_invoice(payment)
+
+        assert %{
+                 "currency" => "GBP",
+                 "exchangeRate" => "1.200000000000000001",
+                 "taxPointDate" => "2026-11-25"
+               } = assert_request()["variables"]["onetimeInvoice"]
       end
     )
   end

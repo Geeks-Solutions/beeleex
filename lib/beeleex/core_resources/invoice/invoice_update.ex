@@ -9,7 +9,9 @@ defmodule Beeleex.InvoiceUpdate do
           decimalPlaces: integer(),
           pricing: list(pricing()),
           created: String.t(),
-          currency: String.t(),
+          currency: String.t() | nil,
+          exchangeRate: String.t() | nil,
+          taxPointDate: Date.t() | String.t() | nil,
           tags: list(String.t())
         }
 
@@ -48,6 +50,8 @@ defmodule Beeleex.InvoiceUpdate do
     :pricing,
     :created,
     :currency,
+    :exchangeRate,
+    :taxPointDate,
     :tags
   ]
 
@@ -55,8 +59,21 @@ defmodule Beeleex.InvoiceUpdate do
     invoice_update
     |> Map.from_struct()
     |> Map.put(:cycleId, invoice_update.cycle.id)
-    |> Map.drop([:cycle, :created, :currency])
+    |> Map.drop([:cycle, :created])
+    |> format_accounting_fields()
   end
+
+  @doc false
+  def format_accounting_fields(payload) do
+    payload
+    |> Map.update(:taxPointDate, nil, &format_tax_point/1)
+    |> Map.reject(fn {key, value} ->
+      key in [:currency, :exchangeRate, :taxPointDate] and is_nil(value)
+    end)
+  end
+
+  defp format_tax_point(%Date{} = date), do: Date.to_iso8601(date)
+  defp format_tax_point(value), do: value
 
   @doc """
   format the following data into a valid pricing map
