@@ -1,13 +1,14 @@
 /*
  * Beeleex billing UI — default stylesheet.
  *
- * Everything is scoped under the `.beeleex` root wrapper (rendered by the
- * Beeleex live layout) so these rules never leak into the host application.
+ * Theme tokens live on the `.beeleex` wrapper. Component classes are
+ * namespaced with `bx-`.
  *
  * THEMING
  * -------
- * The look is driven entirely by CSS custom properties. Override any of them in
- * your own CSS (after this file loads) to match your site. For example:
+ * See docs/integration/theming.md for the supported tokens. Set them on
+ * `.beeleex` after this file loads, or use a more specific host selector.
+ * For example:
  *
  *   .beeleex {
  *     --bx-primary: #ff6a00;
@@ -36,12 +37,14 @@
   --bx-danger: #e11d48;
   --bx-danger-hover: #be123c;
   --bx-danger-contrast: #ffffff;
+  --bx-danger-bg: #fef2f2;
 
   --bx-success: #047857;
   --bx-success-bg: #ecfdf5;
   --bx-warning: #b45309;
   --bx-warning-bg: #fffbeb;
   --bx-info-bg: #eef2ff;
+  --bx-spinner-track: rgba(79, 70, 229, 0.25);
 
   /* Shape & rhythm */
   --bx-font: inherit;
@@ -49,6 +52,8 @@
   --bx-radius-sm: 0.375rem;
   --bx-gap: 1rem;
   --bx-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.1);
+  --bx-modal-overlay: rgba(17, 24, 39, 0.5);
+  --bx-modal-shadow: 0 10px 30px rgba(16, 24, 40, 0.2);
   --bx-ring: 0 0 0 3px rgba(79, 70, 229, 0.25);
 
   color: var(--bx-text);
@@ -56,6 +61,12 @@
   font-family: var(--bx-font);
   font-size: 0.95rem;
   line-height: 1.5;
+}
+
+@supports (color: color-mix(in srgb, black, transparent)) {
+  .beeleex {
+    --bx-ring: 0 0 0 3px color-mix(in srgb, var(--bx-focus-color, var(--bx-primary)) 25%, transparent);
+  }
 }
 
 .beeleex *,
@@ -129,7 +140,7 @@
 
 /* ---- Links ---- */
 .bx-link {
-  color: var(--bx-primary);
+  color: var(--bx-link, var(--bx-primary));
   text-decoration: none;
   font-weight: 500;
 }
@@ -153,10 +164,13 @@
   justify-content: center;
   gap: 0.4rem;
   font: inherit;
-  font-weight: 550;
+  font-size: var(--bx-button-font-size, inherit);
+  font-weight: var(--bx-button-font-weight, 550);
+  letter-spacing: var(--bx-button-letter-spacing, inherit);
+  text-transform: var(--bx-button-text-transform, inherit);
   line-height: 1;
-  padding: 0.6rem 1rem;
-  border-radius: var(--bx-radius-sm);
+  padding: var(--bx-button-padding, 0.6rem 1rem);
+  border-radius: var(--bx-button-radius, var(--bx-radius-sm));
   border: 1px solid transparent;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
@@ -203,7 +217,7 @@
   border: none;
   padding: 0;
   cursor: pointer;
-  color: var(--bx-primary);
+  color: var(--bx-link, var(--bx-primary));
 }
 .bx-action:hover {
   text-decoration: underline;
@@ -236,8 +250,15 @@
 }
 .bx-input:focus {
   outline: none;
-  border-color: var(--bx-primary);
+  border-color: var(--bx-focus-color, var(--bx-primary));
   box-shadow: var(--bx-ring);
+}
+@media (forced-colors: active) {
+  .bx-btn:focus-visible,
+  .bx-input:focus {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
 }
 .bx-input--invalid {
   border-color: var(--bx-danger);
@@ -307,7 +328,7 @@
   align-items: flex-start;
   gap: 1rem;
   padding-bottom: 1.25rem;
-  border-bottom: 3px solid var(--bx-primary);
+  border-bottom: 3px solid var(--bx-invoice-accent, var(--bx-primary));
 }
 .bx-invoice__header .bx-title {
   font-size: clamp(1.45rem, 4vw, 2rem);
@@ -531,8 +552,8 @@
   border-color: transparent;
 }
 .bx-badge--danger {
-  background: #fef2f2;
-  color: var(--bx-danger);
+  background: var(--bx-danger-bg);
+  color: var(--bx-badge-danger-text, var(--bx-danger));
   border-color: transparent;
 }
 
@@ -545,11 +566,11 @@
 }
 .bx-alert--info {
   background: var(--bx-info-bg);
-  color: var(--bx-primary-hover);
+  color: var(--bx-alert-info-text, var(--bx-primary-hover));
 }
 .bx-alert--error {
-  background: #fef2f2;
-  color: var(--bx-danger-hover);
+  background: var(--bx-danger-bg);
+  color: var(--bx-alert-error-text, var(--bx-danger-hover));
 }
 
 .bx-inline-feedback {
@@ -561,14 +582,14 @@
 .bx-spinner {
   width: 0.85rem;
   height: 0.85rem;
-  border: 2px solid rgba(79, 70, 229, 0.25);
+  border: 2px solid var(--bx-spinner-track);
   border-top-color: var(--bx-primary);
   border-radius: 50%;
   animation: bx-spin 0.75s linear infinite;
 }
 
 .bx-spinner--info {
-  border-color: rgba(79, 70, 229, 0.25);
+  border-color: var(--bx-spinner-track);
   border-top-color: var(--bx-primary);
 }
 
@@ -618,7 +639,7 @@
 .bx-modal__overlay {
   position: absolute;
   inset: 0;
-  background: rgba(17, 24, 39, 0.5);
+  background: var(--bx-modal-overlay);
 }
 .bx-modal__content {
   position: relative;
@@ -626,7 +647,7 @@
   margin: 5rem auto;
   background: var(--bx-surface);
   border-radius: var(--bx-radius);
-  box-shadow: 0 10px 30px rgba(16, 24, 40, 0.2);
+  box-shadow: var(--bx-modal-shadow);
   padding: 1.5rem;
 }
 .bx-modal__close {
