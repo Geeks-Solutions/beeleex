@@ -109,8 +109,8 @@ The pages run through the macro-provided `:beeleex_browser` pipeline
    .beeleex { --bx-primary: #ff6a00; --bx-radius: 4px; }
    ```
 
-   See [theming.md](theming.md) for the full variable list and how the
-   `.beeleex`-scoped semantic classes work.
+   See [theming.md](theming.md) for the supported tokens and stylesheet
+   precedence.
 
 ## API surface used
 
