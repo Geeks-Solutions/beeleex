@@ -60,7 +60,8 @@ company is enriched via `Beeleex.Company.compute_bu_cycle/1`.
 `Beeleex.OnetimePayment.t() :: {:ok, Beeleex.Invoice.t()} | {:error, String.t()}`
 
 Issues a one-time invoice and starts collection. Returns the invoice with
-its tags. Omitted `currency` uses the BU default. `exchangeRate` and
+its tags and the accounting read model described below. Omitted `currency`
+uses the BU default. `exchangeRate` and
 `taxPointDate` follow the same rules as `update_invoices/1`.
 
 ### `get_invoice(token, invoice_id)`
@@ -71,11 +72,47 @@ Fetches a single invoice by Beelee ID using the caller's token. The invoice's
 `checkout_operation:<uuid>`. This applies to one-time, cycle-based, and batched
 invoices. An empty list stays `[]`; omitted or null tags are `nil`.
 
+All four invoice response paths (detail, list, current cycle, and one-time
+creation) request the same accounting fields:
+
+- Official `invoice_number` / `invoice_reference`, distinct from internal `id`.
+- Invoice `currency` / `decimal_places`, original net/tax/gross, applied credit
+  net/tax/gross, and `outstanding_amount`.
+- `issued_at` (UTC), `tax_point_date`, `due_date`, settlement `closing_date`,
+  creation `inserted_at`, and `accounting_data_status`.
+- Immutable `seller_snapshot` / `buyer_snapshot` with source ID, legal name,
+  address, VAT and registration numbers. `company` is a separate live link.
+- Reporting `seller_currency` / `seller_decimal_places`, exact `exchange_rate`,
+  and original reporting net/tax/gross. The rate is reporting units per invoice
+  unit; no reporting credit or balance is inferred.
+- Package description, project, unit/net price (quantity one), tax rate/tax/gross;
+  usage description, quantity, unit price, net/tax/gross and tax rate.
+
+Money remains integer minor units or exact BigInteger strings. Decimal FX and
+BigInteger invoice numbers remain strings; no floating-point conversion occurs.
+Tax rates are basis points, independent of the monetary scale.
+
+Null accounting fields remain `nil`: they are not replaced by zero, EUR, the
+record creation date, or current company details. `DRAFT` means not issued;
+`COMPLETE` may still have no official number/reference; `LEGACY_PARTIAL` means
+historical accounting is incomplete. Paid outstanding may be known zero even
+when other historical facts are missing. Migrated facts are displayed exactly
+as returned by the API, with no client-side reconstruction.
+
+The bundled list and detail views label currency on monetary values, distinguish
+internal IDs from official identification, and show missing facts explicitly.
+Draft zero placeholders returned by the legacy API are displayed as unknown
+totals until pricing, while the decoded model retains the original response.
+Deploy the additive accounting API schema before using these query documents.
+The API's historical-freeze/provenance work is tracked in `beelee-21d.1.10`;
+that migration must supply stored historical facts rather than a client fallback.
+
 ### `get_invoices(token, opts \\ [])`
 `(String.t(), keyword()) :: {:ok, %{invoices: [Beeleex.Invoice.t()], total: integer(), count: integer()}} | {:error, String.t()}`
 
 Lists invoices using the caller's token. Accepts `:filter`, `:size`, and `:skip`.
-Each invoice includes tags with the same behavior as `get_invoice/2`.
+Each invoice includes the same tags and accounting model as `get_invoice/2`.
+`total` is the number of matching rows, not a monetary total.
 
 ### `get_current_cycle_invoices(company_id, project_id, tag)`
 `(String.t(), String.t(), String.t()) :: {:ok, list(Beeleex.Invoice.t())} | {:error, String.t()}`

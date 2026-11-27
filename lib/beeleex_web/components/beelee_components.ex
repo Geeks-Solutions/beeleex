@@ -236,25 +236,63 @@ defmodule BeeleexWeb.BeeleeComponents do
   end
 
   @doc """
-  Format a Beelee monetary amount. Beelee returns amounts as integers in minor
-  units together with a `decimalPlaces` value, e.g. `1050` / `2` -> `"10.50"`.
+  Format exact minor units (an integer or base-10 integer string) at the stored
+  scale, e.g. `1050` / `2` -> `"10.50"`. No floating-point conversion or rounding.
+  Unknown amounts/scales and invalid values render as `—`. Omitting the scale
+  retains the two-place convenience default; an explicitly null scale is unknown.
   """
   def format_amount(amount, decimal_places \\ 2)
   def format_amount(nil, _decimal_places), do: "—"
 
-  def format_amount(amount, decimal_places) when is_integer(amount) do
-    dp = decimal_places || 2
-    :erlang.float_to_binary(amount / :math.pow(10, dp), decimals: dp)
+  def format_amount(amount, decimal_places)
+      when is_binary(amount) and is_integer(decimal_places) and decimal_places >= 0 do
+    case Integer.parse(amount) do
+      {integer, ""} -> format_amount(integer, decimal_places)
+      _ -> "—"
+    end
   end
 
-  def format_amount(amount, _decimal_places), do: to_string(amount)
+  def format_amount(amount, decimal_places)
+      when is_integer(amount) and is_integer(decimal_places) and decimal_places >= 0 do
+    sign = if amount < 0, do: "-", else: ""
+    digits = amount |> abs() |> Integer.to_string() |> String.pad_leading(decimal_places + 1, "0")
+
+    if decimal_places == 0 do
+      sign <> digits
+    else
+      {whole, fraction} = String.split_at(digits, -decimal_places)
+      sign <> whole <> "." <> fraction
+    end
+  end
+
+  def format_amount(_amount, _decimal_places), do: "—"
+
+  @doc "Format money with an explicit currency label; never assume a currency."
+  def format_money(amount, decimal_places, currency) do
+    label = if currency in [nil, ""], do: gettext("currency unknown"), else: currency
+    format_amount(amount, decimal_places) <> " " <> label
+  end
 
   @doc """
   Maps an invoice/payment status to a `<.badge>` tone.
   """
   def invoice_status_tone("paid"), do: :success
-  def invoice_status_tone("pending"), do: :warning
-  def invoice_status_tone(status) when status in ["failed", "unpaid"], do: :danger
+
+  def invoice_status_tone(status)
+      when status in [
+             "pending",
+             "pending_host",
+             "pending_payment",
+             "payment_processing",
+             "payment_retrying",
+             "payment_queued"
+           ],
+      do: :warning
+
+  def invoice_status_tone(status)
+      when status in ["failed", "unpaid", "payment_failed", "payment_correction"],
+      do: :danger
+
   def invoice_status_tone(_status), do: :neutral
 
   @doc "Shows a modal by id."

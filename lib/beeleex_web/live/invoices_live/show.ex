@@ -3,6 +3,7 @@ defmodule BeeleexWeb.InvoicesLive.Show do
   Read-only view of a single invoice.
   """
   use BeeleexWeb, :live_view
+  import BeeleexWeb.InvoicesLive.Components
 
   @impl true
   def mount(_params, session, socket) do
@@ -25,7 +26,7 @@ defmodule BeeleexWeb.InvoicesLive.Show do
       {:ok, invoice} ->
         {:noreply,
          socket
-         |> assign(:page_title, gettext("Invoice #%{id}", id: invoice.id))
+         |> assign(:page_title, invoice_title(invoice))
          |> assign(:company_path, company_path)
          |> assign(:invoice, invoice)}
 
@@ -45,15 +46,38 @@ defmodule BeeleexWeb.InvoicesLive.Show do
 
       <div class="bx-header">
         <h1 class="bx-title">
-          <%= gettext("Invoice #%{id}", id: @invoice.id) %>
+          <%= invoice_title(@invoice) %>
         </h1>
-        <.badge tone={invoice_status_tone(@invoice.status)}><%= @invoice.status %></.badge>
+        <.badge tone={invoice_status_tone(@invoice.status)}>
+          <%= payment_status(@invoice.status) %>
+        </.badge>
+        <.badge><%= accounting_status(@invoice.accounting_data_status) %></.badge>
       </div>
+
+      <p :if={@invoice.accounting_data_status != "COMPLETE"} class="bx-notice">
+        <%= gettext("Accounting facts may be incomplete. Missing values are not zero; live company data is not used for historical parties.") %>
+      </p>
 
       <section class="bx-card bx-invoice-summary">
         <dl class="bx-dl">
+          <dt><%= gettext("Official reference") %></dt>
+          <dd><%= known(@invoice.invoice_reference) %></dd>
+          <dt><%= gettext("Official number") %></dt>
+          <dd><%= known(@invoice.invoice_number) %></dd>
+          <dt><%= gettext("Internal ID") %></dt>
+          <dd><%= @invoice.id %></dd>
+          <dt><%= gettext("Issued at (UTC)") %></dt>
+          <dd><%= known(@invoice.issued_at) %></dd>
+          <dt><%= gettext("Tax point date") %></dt>
+          <dd><%= known(@invoice.tax_point_date) %></dd>
+          <dt><%= gettext("Due date") %></dt>
+          <dd><%= known(@invoice.due_date) %></dd>
+          <dt><%= gettext("Settled at") %></dt>
+          <dd><%= known(@invoice.closing_date) %></dd>
+          <dt><%= gettext("Record created at") %></dt>
+          <dd><%= known(@invoice.inserted_at) %></dd>
           <dt><%= gettext("Type") %></dt>
-          <dd><%= @invoice.type %></dd>
+          <dd><%= known(@invoice.type) %></dd>
           <%= if @invoice.cycle not in [nil, ""] do %>
             <dt><%= gettext("Cycle") %></dt>
             <dd><%= @invoice.cycle %></dd>
@@ -64,32 +88,13 @@ defmodule BeeleexWeb.InvoicesLive.Show do
           <% end %>
         </dl>
 
-        <dl class="bx-invoice-totals">
-          <div class="bx-invoice-totals__row">
-            <dt><%= gettext("Amount before tax") %></dt>
-            <dd><%= format_amount(@invoice.amount_before_tax, @invoice.decimal_places) %></dd>
-          </div>
-          <div class="bx-invoice-totals__row">
-            <dt><%= gettext("Tax") %></dt>
-            <dd><%= format_amount(@invoice.tax_amount, @invoice.decimal_places) %></dd>
-          </div>
-          <div class="bx-invoice-totals__row bx-invoice-totals__row--total">
-            <dt><%= gettext("Amount with tax") %></dt>
-            <dd><%= format_amount(@invoice.amount_with_tax, @invoice.decimal_places) %></dd>
-          </div>
-        </dl>
       </section>
 
-      <section :if={@invoice.breakdown not in [nil, []]} class="bx-section">
-        <h2 class="bx-subtitle"><%= gettext("Breakdown") %></h2>
-        <.table id="invoice-breakdown" rows={@invoice.breakdown || []}>
-          <:col :let={line} label={gettext("Project")}><%= line[:project_name] %></:col>
-          <:col :let={line} label={gettext("Package")}><%= line[:package_name] %></:col>
-          <:col :let={line} label={gettext("Price before tax")}>
-            <%= format_amount(line[:package_price_before_tax], @invoice.decimal_places) %>
-          </:col>
-        </.table>
-      </section>
+      <.party id="invoice-seller" title={gettext("Seller (stored snapshot)")} snapshot={@invoice.seller_snapshot} />
+      <.party id="invoice-buyer" title={gettext("Buyer (stored snapshot)")} snapshot={@invoice.buyer_snapshot} />
+      <.totals invoice={@invoice} />
+      <.lines invoice={@invoice} />
+      <.reporting invoice={@invoice} />
     </div>
     """
   end

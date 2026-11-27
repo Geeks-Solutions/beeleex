@@ -14,6 +14,7 @@ defmodule BeeleexWeb.InvoicesLive.ListComponent do
     * `:companies_path` - base path used to build invoice detail links
   """
   use BeeleexWeb, :live_component
+  import BeeleexWeb.InvoicesLive.Components
 
   @page_size 10
 
@@ -75,13 +76,26 @@ defmodule BeeleexWeb.InvoicesLive.ListComponent do
       <.flash_alert :if={@error} kind={:error}><%= @error %></.flash_alert>
 
       <.table id={"#{@id}-table"} rows={@invoices} empty_message={gettext("No invoices yet")}>
+        <:col :let={invoice} label={gettext("Invoice")}>
+          <%= invoice_title(invoice) %>
+          <p><%= gettext("Internal ID: %{id}", id: invoice.id) %></p>
+        </:col>
         <:col :let={invoice} label={gettext("Type")}><%= invoice.type %></:col>
         <:col :let={invoice} label={gettext("Status")}>
-          <.badge tone={invoice_status_tone(invoice.status)}><%= invoice.status %></.badge>
+          <.badge tone={invoice_status_tone(invoice.status)}><%= payment_status(invoice.status) %></.badge>
+          <p><%= accounting_status(invoice.accounting_data_status) %></p>
         </:col>
         <:col :let={invoice} label={gettext("Cycle")}><%= invoice.cycle %></:col>
-        <:col :let={invoice} label={gettext("Amount")}>
-          <%= format_amount(invoice.amount_with_tax, invoice.decimal_places) %>
+        <:col :let={invoice} label={gettext("Issued at (UTC)")}><%= known(invoice.issued_at) %></:col>
+        <:col :let={invoice} label={gettext("Due date")}><%= known(invoice.due_date) %></:col>
+        <:col :let={invoice} label={gettext("Original total")}>
+          <%= money(invoice.amount_with_tax, invoice) %>
+        </:col>
+        <:col :let={invoice} label={gettext("Credited total")}>
+          <%= money(invoice.reduction_amount_with_tax, invoice) %>
+        </:col>
+        <:col :let={invoice} label={gettext("Outstanding balance")}>
+          <%= money(invoice.outstanding_amount, invoice) %>
         </:col>
         <:action :let={invoice}>
           <.link

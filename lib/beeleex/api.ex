@@ -249,19 +249,9 @@ defmodule Beeleex.Api do
            url(),
            %{
              query: """
-             mutation generateInvoice($onetimeInvoice: OnetimeInvoiceInput) {
-              generateOnetimeInvoice(companyInvoice: $onetimeInvoice) {
-                id
-                amount_before_tax
-                tax_amount
-                tax_rate
-                amount_with_tax
-                status
-                type
-                tags
-                reduction_amount_before_tax
-                reduction_tax_amount
-                reduction_amount_with_tax
+              mutation generateInvoice($onetimeInvoice: OnetimeInvoiceInput) {
+               generateOnetimeInvoice(companyInvoice: $onetimeInvoice) {
+                 #{invoice_fields()}
               }
              }
              """,
@@ -290,27 +280,10 @@ defmodule Beeleex.Api do
            url(),
            %{
              query: """
-             query getInvoices($filter: [Filter], $size: Int, $skip: Int) {
-               getInvoices(filter: $filter, size: $size, skip: $skip) {
-                 invoices {
-                   id
-                   amount_before_tax
-                   tax_amount
-                   tax_rate
-                   amount_with_tax
-                   cycle
-                   beginning
-                   end
-                   type
-                   reduction_amount_before_tax
-                   reduction_tax_amount
-                   reduction_amount_with_tax
-                   status
-                   tags
-                   breakdown {
-                     projectId
-                     packageName
-                   }
+              query getInvoices($filter: [Filter], $size: Int, $currentCycle: Boolean) {
+                getInvoices(filter: $filter, size: $size, currentCycle: $currentCycle) {
+                  invoices {
+                    #{invoice_fields()}
                  }
                  count
                  total
@@ -324,7 +297,7 @@ defmodule Beeleex.Api do
                  %{key: "tag", value: tag}
                ],
                size: 50,
-               current_cycle: true
+               currentCycle: true
              }
            },
            headers()
@@ -1112,10 +1085,12 @@ defmodule Beeleex.Api do
     """
   end
 
-  # Invoice fields requested by the back-office UI.
+  # Shared by every invoice response so decoding never loses accounting facts.
   defp invoice_fields do
     """
     id
+    invoiceNumber
+    invoiceReference
     type
     tags
     status
@@ -1123,24 +1098,41 @@ defmodule Beeleex.Api do
     cycle
     beginning
     end
-    closing_date
+    closingDate
     insertedAt
+    issuedAt
+    taxPointDate
+    dueDate
+    accountingDataStatus
+    currency
     decimalPlaces
     amountBeforeTax
     taxAmount
     taxRate
     amountWithTax
-    reduction_amount_before_tax
-    reduction_tax_amount
-    reduction_amount_with_tax
+    reductionAmountBeforeTax
+    reductionTaxAmount
+    reductionAmountWithTax
+    outstandingAmount
+    sellerCurrency
+    sellerDecimalPlaces
+    exchangeRate
+    sellerAmountBeforeTax
+    sellerTaxAmount
+    sellerAmountWithTax
+    sellerSnapshot { #{invoice_party_fields()} }
+    buyerSnapshot { #{invoice_party_fields()} }
     company {
       id
       name
     }
     breakdown {
       packageName
+      packageDescription
       packagePriceBeforeTax
       packageTax
+      packageTaxRate
+      packagePriceWithTax
       projectId
       projectName
       payAsYouGo {
@@ -1150,7 +1142,25 @@ defmodule Beeleex.Api do
         unitPriceBeforeTax
         totalBeforeTax
         tax
+        taxRate
+        totalWithTax
       }
+    }
+    """
+  end
+
+  defp invoice_party_fields do
+    """
+    sourceId
+    name
+    vatNumber
+    registrationNumber
+    address {
+      streetNumber
+      streetName
+      postalCode
+      city
+      country
     }
     """
   end
